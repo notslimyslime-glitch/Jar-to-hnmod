@@ -41,6 +41,7 @@ export function validateNamedHookReferences(manifest: string): void {
   for (const block of blocks) {
     const hook = /^\s*hook\s*=\s*"([^"]+)"\s*$/m.exec(block)?.[1];
     const versionText = /^\s*hook_version\s*=\s*(\d+)\s*$/m.exec(block)?.[1];
+    const target = /^\s*target\s*=\s*"([^"]+)"\s*$/m.exec(block)?.[1];
     const hasTarget = /^\s*target\s*=/m.test(block);
     if (hook && hasTarget) throw new Error("An injection cannot define both a named hook and a raw target.");
     if (!hook && !hasTarget) throw new Error("Each injection must define either a named hook or a raw target.");
@@ -52,6 +53,8 @@ export function validateNamedHookReferences(manifest: string): void {
       if (Number(versionText) !== expected.version) {
         throw new Error(`Horizon hook "${hook}" requires contract version ${expected.version}, not ${versionText}.`);
       }
+    } else if (!target || !HORIZON_HOOKS.some(item => item.target === target)) {
+      throw new Error("Raw injection target is not present in the pinned Horizon hook catalog.");
     }
   }
 }
