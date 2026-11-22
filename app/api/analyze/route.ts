@@ -122,10 +122,10 @@ export async function POST(request: Request) {
       references: memberReferences.filter(member => family.match(member.owner)).length,
       examples: [...new Set(memberReferences.filter(member => family.match(member.owner)).map(member => member.owner + "." + member.name))].slice(0, 12)
     })).filter(family => family.references > 0);
-    const translationReadiness = assessTranslationReadiness({ platform, entrypoints, mixinAnnotations });
     const assets = names.filter(n => n.startsWith("assets/"));
     const depNames = Object.keys(depends);
     const platform = depNames.some(x => /forge|neoforge/i.test(x)) ? "Forge/NeoForge" : fabric ? "Fabric" : "Unknown";
+    const translationReadiness = assessTranslationReadiness({ platform, entrypoints, mixinAnnotations });
     const flags: {level:string;code:string;message:string}[] = [];
     if (!fabric) flags.push({ level:"warning", code:"NO_FABRIC_METADATA", message:"No fabric.mod.json found. This may be a Forge, NeoForge, Quilt, or non-Fabric mod." });
     if (mixinConfigs.length || declaredMixins.length) flags.push({ level:"info", code:"MIXINS_FOUND", message:"Mixin behavior needs hook-by-hook mapping to native Horizon hooks." });
