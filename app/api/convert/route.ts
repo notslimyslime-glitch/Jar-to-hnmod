@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const entrypoints = data.entrypoints && typeof data.entrypoints === "object" && !Array.isArray(data.entrypoints)
       ? data.entrypoints as Record<string, unknown>
       : {};
-    const entrypointCount = Object.values(entrypoints).reduce((sum, value) => sum + (Array.isArray(value) ? value.length : value ? 1 : 0), 0);
+    const entrypointCount = Object.values(entrypoints).reduce<number>((sum, value) => sum + (Array.isArray(value) ? value.length : value ? 1 : 0), 0);
     const names = entries.map(entry => entry.name);
     const mixinConfigs = names.filter(name => name.toLowerCase().endsWith(".mixins.json") || name.toLowerCase().endsWith(".mixin.json"));
     const declaredMixins = Array.isArray(data.mixins) ? data.mixins.length : 0;
