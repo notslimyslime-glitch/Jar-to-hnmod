@@ -73,14 +73,15 @@ export async function packageNativeBundle(input: NativeBundleInput): Promise<Nat
     assert(sourceNames.has(name), `Manifest references missing source file: ${name}`);
   }
 
-  const nativeManifest = {
+  // Match tools/package.py in the official template: JSON keys are sorted.
+  const nativeManifest = Object.fromEntries(Object.entries({
     schema: 1,
     id: input.id,
     version: input.version,
     game: HORIZON_GAME_VERSION,
     horizon: input.horizonRevision,
     mixins: input.mixinsRevision
-  };
+  }).sort(([left], [right]) => left.localeCompare(right)));
 
   const files: Record<string, string> = {
     "horizon-native.json": JSON.stringify(nativeManifest, null, 2) + "\n",
