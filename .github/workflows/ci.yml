@@ -1,0 +1,52 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run lint
+      - run: npm run test:translator
+      - name: Build Cloudflare Worker bundle
+        run: npm run build:worker
+
+  native-bridge-fixture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Test representative translated Rust
+        run: cargo test --locked --manifest-path fixtures/pure-int-translator/Cargo.toml
+      - name: Fetch the pinned Horizon Mixins toolchain
+        run: |
+          git clone --filter=blob:none https://github.com/horizon-rust/horizon-mixins.git /tmp/horizon-mixins
+          git -C /tmp/horizon-mixins checkout 5a64af938ec86b00d53d16a408aabc0038fb3e57
+          cargo fetch --locked --manifest-path /tmp/horizon-mixins/Cargo.toml
+      - name: Validate the named hook plan
+        run: |
+          cargo run --locked --offline --manifest-path /tmp/horizon-mixins/Cargo.toml -p horizon-mixins-cli -- plan \
+            --workspace fixtures/native-bridge \
+            --mods fixtures/native-bridge/mods \
+            --out /tmp/native-bridge-plan.json
+      - name: Compile the generated metadata adapter
+        run: |
+          cargo run --locked --offline --manifest-path /tmp/horizon-mixins/Cargo.toml -p horizon-mixins-cli -- check \
+            --workspace fixtures/native-bridge \
+            --mods fixtures/native-bridge/mods \
+            --out /tmp/native-bridge-stage \
+            --trust-native-mods

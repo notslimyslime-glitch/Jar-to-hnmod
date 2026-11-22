@@ -1,0 +1,9 @@
+{
+  "hooks": [
+    {
+      "name": "mods",
+      "version": 1,
+      "target": "fixture_game::game::native_hooks::Game::native_mods"
+    }
+  ]
+}

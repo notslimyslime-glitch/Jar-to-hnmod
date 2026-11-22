@@ -1,6 +1,11 @@
 import JSZip from "jszip";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import { inspectClass } from "@/lib/classfile";
+import { HORIZON_HOOKS, HORIZON_REVISION } from "@/lib/horizon-hooks";
+import { assessTranslationReadiness } from "@/lib/translation-rules";
+import { translatePureIntMethods } from "@/lib/pure-int-translator";
+import { detectModPlatform } from "@/lib/mod-platform";
 
 export const runtime = "nodejs";
 const MAX_FILE = 25 * 1024 * 1024;
@@ -43,9 +48,89 @@ export async function POST(request: Request) {
     const mixinConfigs = names.filter(n => n.toLowerCase().endsWith(".mixins.json") || n.toLowerCase().endsWith(".mixin.json"));
     const mixinClasses = names.filter(n => /mixin/i.test(n) && n.endsWith(".class"));
     const classes = names.filter(n => n.endsWith(".class"));
-    const assets = names.filter(n => n.startsWith("assets/"));
+    const mixinConfigReports: { file: string; package: string | null; required: boolean | null; compatibility_level: string | null; refmap: string | null; plugin: string | null; common: string[]; client: string[]; server: string[]; error?: string }[] = [];
+    const configNames = [...new Set([...mixinConfigs, ...declaredMixins])];
+    for (const configName of configNames.slice(0, 40)) {
+      const configFile = zip.file(configName);
+      if (!configFile) { mixinConfigReports.push({ file: configName, package: null, required: null, compatibility_level: null, refmap: null, plugin: null, common: [], client: [], server: [], error: "Declared config file was not found in the archive." }); continue; }
+      try {
+        const raw = await configFile.async("string");
+        if (raw.length > 1024 * 1024) throw new Error("Config exceeds 1 MB.");
+        const parsed: unknown = JSON.parse(raw);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Config root must be an object.");
+        const obj = parsed as Record<string, unknown>;
+        const list = (value: unknown) => Array.isArray(value) ? value.map(item => typeof item === "string" ? item : item && typeof item === "object" && "class" in item ? String((item as {class: unknown}).class) : "").filter(Boolean).slice(0, 300) : [];
+        mixinConfigReports.push({
+          file: configName,
+          package: typeof obj.package === "string" ? obj.package : null,
+          required: typeof obj.required === "boolean" ? obj.required : null,
+          compatibility_level: typeof obj.compatibilityLevel === "string" ? obj.compatibilityLevel : null,
+          refmap: typeof obj.refmap === "string" ? obj.refmap : null,
+          plugin: typeof obj.plugin === "string" ? obj.plugin : null,
+          common: list(obj.mixins), client: list(obj.client), server: list(obj.server)
+        });
+      } catch (error) {
+        mixinConfigReports.push({ file: configName, package: null, required: null, compatibility_level: null, refmap: null, plugin: null, common: [], client: [], server: [], error: error instanceof Error ? error.message : "Invalid mixin config." });
+      }
+    }
+    const classInsights: ReturnType<typeof inspectClass>[] = [];
+    let unreadableClasses = 0;
+    for (const entry of entries.filter(x => x.name.endsWith(".class")).slice(0, 200)) {
+      try {
+        const data = await entry.async("uint8array");
+        if (data.byteLength > 1024 * 1024) { unreadableClasses++; continue; }
+        classInsights.push(inspectClass(data));
+      } catch { unreadableClasses++; }
+    }
+    const mixinAnnotations = classInsights.flatMap(cls => [
+      ...cls.annotations.map(annotation => ({ class_name: cls.name, method_name: null, method_descriptor: null, annotation: annotation.descriptor, values: annotation.values })),
+      ...cls.methods.flatMap(method => method.annotations.map(annotation => ({ class_name: cls.name, method_name: method.name, method_descriptor: method.descriptor, annotation: annotation.descriptor, values: annotation.values })))
+    ]).filter(item => item.annotation.startsWith("Lorg/spongepowered/asm/mixin/")).slice(0, 500);
+    const referencedTypes = [...new Set(classInsights.flatMap(x => x.referencedClasses))].slice(0, 100);
+    const methodCount = classInsights.reduce((sum, x) => sum + x.methods.length, 0);
+    const bytecodeInstructions = classInsights.flatMap(cls => cls.methods.flatMap(method => method.instructions.map(instruction => ({ class_name: cls.name, method_name: method.name, method_descriptor: method.descriptor, ...instruction }))));
+    const invocationSites = bytecodeInstructions.filter(item => [182,183,184,185,186].includes(item.opcode) && item.member);
+    const fieldAccessSites = bytecodeInstructions.filter(item => [178,179,180,181].includes(item.opcode) && item.member);
+    const instructionCounts = new Map<string, number>();
+    for (const item of bytecodeInstructions) instructionCounts.set(item.mnemonic, (instructionCounts.get(item.mnemonic) || 0) + 1);
+    const commonInstructions = [...instructionCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,20).map(([mnemonic,count])=>({mnemonic,count}));
+    // Keep related mixin declarations and concrete JVM call sites together.
+    // This is evidence grouping only, never an automatic Java -> Rust mapping.
+    const behaviorEvidence = classInsights.flatMap(cls => cls.methods.map(method => {
+      const calls = method.instructions.filter(item => [182,183,184,185,186].includes(item.opcode) && item.member).slice(0, 16);
+      const fields = method.instructions.filter(item => [178,179,180,181].includes(item.opcode) && item.member).slice(0, 12);
+      const annotations = method.annotations.filter(item => item.descriptor.startsWith("Lorg/spongepowered/asm/mixin/"));
+      const relevantCalls = [...calls, ...fields].some(item => item.member?.owner.startsWith("net.minecraft.") || item.member?.owner.startsWith("net.fabricmc."));
+      if (!annotations.length && !relevantCalls) return null;
+      return {
+        class_name: cls.name, method_name: method.name, method_descriptor: method.descriptor,
+        evidence_status: "evidence_only",
+        mixin_annotations: annotations.map(item => ({ type: item.descriptor.split("/").pop()?.replace(";", "") || item.descriptor, values: item.values })),
+        calls: calls.map(item => ({ owner: item.member!.owner, name: item.member!.name, descriptor: item.member!.descriptor, instruction: item.mnemonic, offset: item.offset })),
+        fields: fields.map(item => ({ owner: item.member!.owner, name: item.member!.name, descriptor: item.member!.descriptor, instruction: item.mnemonic, offset: item.offset }))
+      };
+    })).filter((item): item is NonNullable<typeof item> => item !== null).slice(0, 250);
+    const memberReferences = classInsights.flatMap(x => x.referencedMembers);
+    const apiFamilies = [
+      { name: "Minecraft", match: (owner: string) => owner.startsWith("net.minecraft.") },
+      { name: "Fabric API", match: (owner: string) => owner.startsWith("net.fabricmc.") },
+      { name: "Mixin", match: (owner: string) => owner.startsWith("org.spongepowered.asm.mixin.") },
+      { name: "Java standard library", match: (owner: string) => owner.startsWith("java.") || owner.startsWith("javax.") },
+      { name: "Kotlin", match: (owner: string) => owner.startsWith("kotlin.") },
+      { name: "Other libraries", match: (owner: string) => !owner.startsWith("net.minecraft.") && !owner.startsWith("net.fabricmc.") && !owner.startsWith("org.spongepowered.asm.mixin.") && !owner.startsWith("java.") && !owner.startsWith("javax.") && !owner.startsWith("kotlin.") }
+    ];
+    const apiSurface = apiFamilies.map(family => ({
+      name: family.name,
+      references: memberReferences.filter(member => family.match(member.owner)).length,
+      examples: [...new Set(memberReferences.filter(member => family.match(member.owner)).map(member => member.owner + "." + member.name))].slice(0, 12)
+    })).filter(family => family.references > 0);
+    const assets = names.filter(n => /^(assets|data)\//.test(n));
     const depNames = Object.keys(depends);
-    const platform = depNames.some(x => /forge|neoforge/i.test(x)) ? "Forge/NeoForge" : fabric ? "Fabric" : "Unknown";
+    const manifestEntry = zip.file("META-INF/MANIFEST.MF");
+    const manifestText = manifestEntry ? await manifestEntry.async("string").catch(() => "") : "";
+    const platform = detectModPlatform({ names, manifest: manifestText });
+    const translationReadiness = assessTranslationReadiness({ platform, entrypoints, mixinAnnotations });
+    const pureIntTranslations = translatePureIntMethods(classInsights);
     const flags: {level:string;code:string;message:string}[] = [];
     if (!fabric) flags.push({ level:"warning", code:"NO_FABRIC_METADATA", message:"No fabric.mod.json found. This may be a Forge, NeoForge, Quilt, or non-Fabric mod." });
     if (mixinConfigs.length || declaredMixins.length) flags.push({ level:"info", code:"MIXINS_FOUND", message:"Mixin behavior needs hook-by-hook mapping to native Horizon hooks." });
@@ -59,10 +144,14 @@ export async function POST(request: Request) {
         version: typeof metadata.version === "string" ? metadata.version : null,
         minecraft: typeof depends.minecraft === "string" ? depends.minecraft : null,
         dependencies: depNames, entrypoints, mixin_configs: [...new Set([...mixinConfigs, ...declaredMixins])],
-        mixin_classes: mixinClasses.length, class_files: classes.length, assets: assets.length
+        mixin_classes: mixinClasses.length, mixin_config_details: mixinConfigReports, class_files: classes.length, assets: assets.length,
+        bytecode_translation: { supported_methods: pureIntTranslations.length, methods: pureIntTranslations },
+        bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, api_surface: apiSurface, member_references_seen: memberReferences.length, bytecode_instructions_seen: bytecodeInstructions.length, invocation_sites_seen: invocationSites.length, field_access_sites_seen: fieldAccessSites.length, common_instructions: commonInstructions, invocation_samples: invocationSites.slice(0,120), field_access_samples: fieldAccessSites.slice(0,80), mixin_annotations: mixinAnnotations, behavior_evidence: behaviorEvidence, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
       },
+      horizon: { revision: HORIZON_REVISION, hooks: HORIZON_HOOKS },
       flags,
-      conversion: { status:"analysis_only", hnmod_generated:false, reason:"A correct native port requires verified mappings for the mod's behavior and target Horizon hooks.", next_step:"Review mixins and entrypoints, then add explicit compatibility mappings before generating Rust." }
+      translation_readiness: translationReadiness,
+      conversion: { status:"analysis_only", hnmod_generated:false, reason:"The analyzer now translates a narrow subset of pure static Java integer methods into Rust. This is real bytecode translation, but those helpers are not yet connected to Minecraft gameplay or a Horizon hook.", next_step:"Expand verified bytecode patterns and build a tested bridge from a supported Minecraft behavior to a matching Horizon hook before packaging gameplay mods." }
     });
   } catch {
     return NextResponse.json({ error: "Could not read this archive. Make sure it is a valid JAR file." }, { status: 400 });
