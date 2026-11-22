@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { HORIZON_HOOKS } from "@/lib/horizon-hooks";
 
 export const HORIZON_GAME_VERSION = "26.3";
 export const HORIZON_REVISION = "ba6344a59cb9e755b730dcf02285fc0d33b97d3c";
@@ -29,6 +30,31 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+/**
+ * Preflight named-hook references against the exact pinned Horizon catalog.
+ * This catches stale hook names/versions before packaging; it does not replace
+ * Horizon Mixins plan/apply or Rust compilation.
+ */
+export function validateNamedHookReferences(manifest: string): void {
+  const blocks = [...manifest.matchAll(/^\\[\\[injection\\]\\]\\s*\\n([\\s\\S]*?)(?=^\\[\\[|^\\[compatibility\\]|^\\[mod\\]|\\s*$)/gm)]
+    .map(match => match[1]);
+  for (const block of blocks) {
+    const hook = /^\\s*hook\\s*=\\s*"([^"]+)"\\s*$/m.exec(block)?.[1];
+    const versionText = /^\\s*hook_version\\s*=\\s*(\\d+)\\s*$/m.exec(block)?.[1];
+    const hasTarget = /^\\s*target\\s*=/m.test(block);
+    if (hook && hasTarget) throw new Error("An injection cannot define both a named hook and a raw target.");
+    if (!hook && versionText) throw new Error("hook_version requires a named hook.");
+    if (hook && !versionText) throw new Error(`Named hook "${hook}" requires hook_version.`);
+    if (hook) {
+      const expected = HORIZON_HOOKS.find(item => item.name === hook);
+      if (!expected) throw new Error(`Unknown Horizon hook "${hook}" in the pinned hook catalog.`);
+      if (Number(versionText) !== expected.version) {
+        throw new Error(`Horizon hook "${hook}" requires contract version ${expected.version}, not ${versionText}.`);
+      }
+    }
+  }
+}
+
 function readTomlString(source: string, section: string, key: string): string | null {
   const escapedSection = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const sectionMatch = new RegExp(`(?:^|\\n)\\[${escapedSection}\\]\\s*\\n([\\s\\S]*?)(?=\\n\\[|$)`).exec(source);
@@ -51,6 +77,7 @@ export async function packageNativeBundle(input: NativeBundleInput): Promise<Nat
   assert(readTomlString(input.mixinManifest, "mod", "id") === input.id, "Manifest mod.id does not match the bundle id.");
   assert(readTomlString(input.mixinManifest, "mod", "version") === input.version, "Manifest mod.version does not match the bundle version.");
   assert(readTomlString(input.mixinManifest, "compatibility", "horizon_revision") === input.horizonRevision, "Manifest Horizon revision does not match the pinned revision.");
+  validateNamedHookReferences(input.mixinManifest);
 
   const sourceEntries = Object.entries(input.sources);
   assert(sourceEntries.length > 0, "A native bundle must contain generated source files.");
