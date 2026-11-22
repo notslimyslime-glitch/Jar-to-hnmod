@@ -1,6 +1,6 @@
 # JAR → HNMOD
 
-A Next.js web app for inspecting Minecraft Java mod JARs and preparing native Horizon conversions.
+A Next.js service for inspecting Minecraft Java mod JARs and preparing native Horizon bundles.
 
 ## Run locally
 
@@ -11,46 +11,41 @@ A Next.js web app for inspecting Minecraft Java mod JARs and preparing native Ho
 
 ## Current functionality
 
-- Drag-and-drop JAR upload
-- 25 MB upload limit, archive entry and expanded-size limits
-- ZIP path traversal checks
-- Multi-loader archive identification for Fabric, Quilt, Forge, NeoForge and legacy Forge
-- Fabric metadata, dependency, entrypoint and mixin discovery
+- Drag-and-drop JAR upload (25 MB limit)
+- ZIP path traversal, entry-count and expanded-size checks
+- Fabric, Quilt, Forge, NeoForge and legacy Forge identification
+- Fabric metadata, dependency, entrypoint and Mixin discovery
 - JVM class-file and bytecode inspection
-- Experimental, deliberately narrow Java-to-Rust translation
-- Reviewed, exact-version AppleSkin native port packaging
-- Optional Gemini-assisted native Rust draft generation for other JARs (unverified until compiled and runtime-tested)
+- A deliberately narrow Java-to-Rust micro-translator for pure static integer methods
+- A reviewed AppleSkin native Rust implementation, packaged as a Horizon `.hnmod` candidate
 
-## Loader coverage versus conversion coverage
+## Starling 0.9.0 target
 
-The analyzer can identify common Fabric, Quilt, Forge and NeoForge archive formats. AppleSkin has one reviewed, exact-version native port. Other JARs can use the optional Gemini-assisted draft path: the service inspects class-file structure, sends bounded metadata/bytecode summaries to Gemini, and asks it for a candidate Rust helper targeting a known Horizon hook. This is a best-effort draft generator, not a universal Java-to-Rust compiler. It can refuse a mod, and any generated bundle remains unverified until it compiles and passes a Starling runtime test.
+Starling 0.9.0 still imports Horizon native mods as `.hnmod` bundles, but it uses a newer Horizon native-mod API. Bundles must target matching Horizon and Horizon Mixins revisions. Starling documents compatibility adaptation for supported older hook names.
 
-## Important conversion limitation
+The AppleSkin bundle is now pinned to the Starling 0.9.0 Horizon revision and uses the current Horizon Mixins revision. This is a compatibility retarget, not proof of a successful native build. It must still pass the full native build and an in-game Starling 0.9.0 test before it can be called working.
 
-This project does not translate arbitrary Java bytecode or Minecraft mod behavior into equivalent Rust. A JAR is never executed. Unsupported gameplay behavior must be reported as unsupported or require a verified, version-specific translator. Generated output must not be presented as a working gameplay conversion unless it has passed the native build and runtime checks.
+## Deterministic conversion policy
 
-## Optional Gemini-assisted conversion
+There is no AI service, external model call, API key, or paid conversion dependency.
 
-The AI draft path uses Google's Gemini Developer API (gemini-2.5-flash). It is disabled unless the server has a GEMINI_API_KEY secret.
+The service only emits a bundle when it has a real native Rust implementation for that exact mod build. Other JARs receive a clear explanation that no verified port exists yet. The service does not rename a JAR, create empty Rust stubs, or label metadata inspection as gameplay conversion.
 
-- For local development, put GEMINI_API_KEY=... in an ignored local .env.local file.
-- For Cloudflare Workers, add GEMINI_API_KEY as a runtime secret in the Worker settings. Never put the key in client-side code, a NEXT_PUBLIC_* variable, or Git.
-- The API's free tier has quotas and can change. A 429 response means the free-tier limit was reached.
-- The AI receives bounded class-file summaries and mod metadata, not the original JAR as an executable or uploaded binary. Google's free-tier terms state submitted content may be used to improve Google products, so do not send private or proprietary mods through this path.
-- The output is explicitly marked unverified-ai-draft. The packager checks archive structure and known hook names, but does not compile the generated Rust or prove behavior. Treat it as a starting point for review, not a working conversion.
+A general Java-to-Rust translator still needs real mappings for Minecraft APIs, Fabric/Forge entrypoints, Mixin injection behavior, resources, dependencies and game lifecycle. Arbitrary Java mods cannot be guaranteed to convert automatically when Horizon does not expose equivalent behavior.
+
 ## Cloudflare Workers
 
-The app uses the OpenNext Cloudflare adapter so its Next.js pages and API route handlers can run on Cloudflare Workers.
+The app uses the OpenNext Cloudflare adapter.
 
-- `npm run build:worker` builds the Next.js app and adapts it for Workers.
+- `npm run build:worker` builds and adapts the app for Workers.
 - `npm run preview:worker` builds and previews the Worker locally.
 - `npm run deploy:worker` builds and deploys to the authenticated Cloudflare account.
 - `npm run cf-typegen` generates Cloudflare binding types.
 
-Before deploying, authenticate Wrangler with `npx wrangler login`. Alternatively, connect this GitHub repository in Cloudflare Workers Builds and configure the build command as `npm run build:worker` and the deploy command as `npx wrangler deploy`.
+Before deploying, authenticate Wrangler with `npx wrangler login`. Alternatively, connect this repository in Cloudflare Workers Builds and configure the build command as `npm run build:worker` and the deploy command as `npx wrangler deploy`.
 
-Do not commit Cloudflare API tokens, account credentials, or local `.dev.vars` files. Production secrets belong in Cloudflare's Worker settings.
+Do not commit Cloudflare API tokens, account credentials, or local `.dev.vars` files. Production secrets belong in Cloudflare Worker settings.
 
 ## Deployment status
 
-Cloudflare configuration is prepared in this repository. It is not deployed until a Cloudflare account is connected and a successful Worker deployment is verified.
+Cloudflare configuration is prepared in this repository. A code push is not proof of a successful production deployment; verify the Worker build and deployment logs before treating a change as live.
