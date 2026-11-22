@@ -34,7 +34,7 @@ export function translatePureIntMethod(cls: ClassSummary, method: ClassSummary["
 
   for (let index = 0; index < instructions.length; index++) {
     const instruction = instructions[index];
-    const load = /^iload_([0-3])$/.exec(instruction.mnemonic);
+    const load = /^iload_([0-3])$/.exec(instruction.mnemonic);\n    const indexedLoad = instruction.mnemonic === "iload" && instruction.operands?.length === 1 ? instruction.operands[0] : null;
     const constant = /^iconst_(m1|[0-5])$/.exec(instruction.mnemonic);
     if (load) {
       const argumentIndex = Number(load[1]);
@@ -42,7 +42,7 @@ export function translatePureIntMethod(cls: ClassSummary, method: ClassSummary["
       stack.push(`arg${argumentIndex}`);
       continue;
     }
-    if (constant) {
+    if (instruction.mnemonic === "bipush" || instruction.mnemonic === "sipush") {\n      if (returned || instruction.operands?.length !== 1) return null;\n      stack.push(String(instruction.operands[0]));\n      continue;\n    }\n    if (constant) {
       if (returned) return null;
       stack.push(constant[1] === "m1" ? "-1" : constant[1]);
       continue;
