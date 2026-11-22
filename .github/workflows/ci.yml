@@ -56,5 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check runner Python syntax
+        run: python3 -m py_compile porter-runner/app.py
       - name: Build the Horizon Porter service image
         run: docker build --tag jar-to-hnmod-porter:ci --file porter-runner/Dockerfile .
