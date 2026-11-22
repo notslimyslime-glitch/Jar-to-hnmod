@@ -18,16 +18,26 @@ A Next.js web app for inspecting Minecraft Java mod JARs and preparing native Ho
 - Fabric metadata, dependency, entrypoint and mixin discovery
 - JVM class-file and bytecode inspection
 - Experimental, deliberately narrow Java-to-Rust translation
-- Native HNMOD packaging checks for supported metadata-only cases
+- Reviewed, exact-version AppleSkin native port packaging
+- Optional Gemini-assisted native Rust draft generation for other JARs (unverified until compiled and runtime-tested)
 
 ## Loader coverage versus conversion coverage
 
-The analyzer can identify common Fabric, Quilt, Forge and NeoForge archive formats. Identification is not conversion: the only gameplay conversion currently implemented is the reviewed, exact-version AppleSkin native port. Other JARs are inspected and classified, then rejected rather than packaged as fake working mods.
+The analyzer can identify common Fabric, Quilt, Forge and NeoForge archive formats. AppleSkin has one reviewed, exact-version native port. Other JARs can use the optional Gemini-assisted draft path: the service inspects class-file structure, sends bounded metadata/bytecode summaries to Gemini, and asks it for a candidate Rust helper targeting a known Horizon hook. This is a best-effort draft generator, not a universal Java-to-Rust compiler. It can refuse a mod, and any generated bundle remains unverified until it compiles and passes a Starling runtime test.
 
 ## Important conversion limitation
 
 This project does not translate arbitrary Java bytecode or Minecraft mod behavior into equivalent Rust. A JAR is never executed. Unsupported gameplay behavior must be reported as unsupported or require a verified, version-specific translator. Generated output must not be presented as a working gameplay conversion unless it has passed the native build and runtime checks.
 
+## Optional Gemini-assisted conversion
+
+The AI draft path uses Google's Gemini Developer API (gemini-2.5-flash). It is disabled unless the server has a GEMINI_API_KEY secret.
+
+- For local development, put GEMINI_API_KEY=... in an ignored local .env.local file.
+- For Cloudflare Workers, add GEMINI_API_KEY as a runtime secret in the Worker settings. Never put the key in client-side code, a NEXT_PUBLIC_* variable, or Git.
+- The API's free tier has quotas and can change. A 429 response means the free-tier limit was reached.
+- The AI receives bounded class-file summaries and mod metadata, not the original JAR as an executable or uploaded binary. Google's free-tier terms state submitted content may be used to improve Google products, so do not send private or proprietary mods through this path.
+- The output is explicitly marked unverified-ai-draft. The packager checks archive structure and known hook names, but does not compile the generated Rust or prove behavior. Treat it as a starting point for review, not a working conversion.
 ## Cloudflare Workers
 
 The app uses the OpenNext Cloudflare adapter so its Next.js pages and API route handlers can run on Cloudflare Workers.
