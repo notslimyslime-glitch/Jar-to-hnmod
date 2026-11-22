@@ -79,6 +79,10 @@ export async function POST(request: Request) {
         classInsights.push(inspectClass(data));
       } catch { unreadableClasses++; }
     }
+    const mixinAnnotations = classInsights.flatMap(cls => [
+      ...cls.annotations.map(annotation => ({ class_name: cls.name, method_name: null, method_descriptor: null, annotation: annotation.descriptor, values: annotation.values })),
+      ...cls.methods.flatMap(method => method.annotations.map(annotation => ({ class_name: cls.name, method_name: method.name, method_descriptor: method.descriptor, annotation: annotation.descriptor, values: annotation.values })))
+    ]).filter(item => item.annotation.startsWith("Lorg/spongepowered/asm/mixin/")).slice(0, 500);
     const referencedTypes = [...new Set(classInsights.flatMap(x => x.referencedClasses))].slice(0, 100);
     const methodCount = classInsights.reduce((sum, x) => sum + x.methods.length, 0);
     const memberReferences = classInsights.flatMap(x => x.referencedMembers);
@@ -112,11 +116,11 @@ export async function POST(request: Request) {
         minecraft: typeof depends.minecraft === "string" ? depends.minecraft : null,
         dependencies: depNames, entrypoints, mixin_configs: [...new Set([...mixinConfigs, ...declaredMixins])],
         mixin_classes: mixinClasses.length, mixin_config_details: mixinConfigReports, class_files: classes.length, assets: assets.length,
-        bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, api_surface: apiSurface, member_references_seen: memberReferences.length, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
+        bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, api_surface: apiSurface, member_references_seen: memberReferences.length, mixin_annotations: mixinAnnotations, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
       },
       horizon: { revision: HORIZON_REVISION, hooks: HORIZON_HOOKS },
       flags,
-      conversion: { status:"analysis_only", hnmod_generated:false, reason:"The scanner now inspects JVM class structure, method signatures, referenced types, member references and Mixin configuration declarations. This is evidence for translation, not a Java-to-Rust compiler.", next_step:"Build verified translators for specific Minecraft APIs and map each behavior to supported Horizon hooks. Unsupported code must remain clearly marked instead of being packaged as a working mod." }
+      conversion: { status:"analysis_only", hnmod_generated:false, reason:"The scanner now inspects JVM class structure, method signatures, referenced types, member references, Mixin configuration declarations and visible Mixin annotations. This is evidence for translation, not a Java-to-Rust compiler.", next_step:"Build verified translators for specific Minecraft APIs and map each behavior to supported Horizon hooks. Unsupported code must remain clearly marked instead of being packaged as a working mod." }
     });
   } catch {
     return NextResponse.json({ error: "Could not read this archive. Make sure it is a valid JAR file." }, { status: 400 });
