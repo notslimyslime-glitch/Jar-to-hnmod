@@ -36,8 +36,8 @@ function assert(condition: unknown, message: string): asserts condition {
  * Horizon Mixins plan/apply or Rust compilation.
  */
 export function validateNamedHookReferences(manifest: string): void {
-  const blocks = [...manifest.matchAll(/^\\[\\[injection\\]\\]\\s*\\n([\\s\\S]*?)(?=^\\[\\[|^\\[compatibility\\]|^\\[mod\\]|\\s*$)/gm)]
-    .map(match => match[1]);
+  const blocks = manifest.split(/^\\[\\[injection\\]\\]\\s*$/m).slice(1)
+    .map(section => section.split(/^\\[/m, 1)[0]);
   for (const block of blocks) {
     const hook = /^\\s*hook\\s*=\\s*"([^"]+)"\\s*$/m.exec(block)?.[1];
     const versionText = /^\\s*hook_version\\s*=\\s*(\\d+)\\s*$/m.exec(block)?.[1];
