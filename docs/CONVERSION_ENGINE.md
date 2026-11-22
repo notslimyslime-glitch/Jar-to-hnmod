@@ -113,3 +113,12 @@ The same preflight also rejects raw `target` paths that are not listed in that p
 The repository now includes `fixtures/native-bridge`, a tiny Rust workspace that mirrors the exact type shape used by the metadata bridge: a `Game::native_mods` hook and Horizon's `NativeMod` record. Its named-hook catalog and compatibility stamp are pinned to the same Horizon and Horizon Mixins revisions as the packager.
 
 CI checks the fixture twice with the pinned Horizon Mixins 0.6.0 CLI: first it builds a plan from the named hook, then it stages and compiles the injected helper with `check --trust-native-mods`. This proves the adapter's Rust signature, binding, manifest and packaging assumptions against the pinned mixin engine in a controlled fixture. It does **not** prove conversion of arbitrary Fabric code or gameplay behavior, and it does not replace a full build against Horizon's complete game workspace.
+
+
+## First Java bytecode -> Rust translator
+
+`lib/pure-int-translator.ts` implements the first actual Java-to-Rust translation rule. It accepts only static methods with 0-4 integer parameters and an integer return value, using a straight-line bytecode subset: `iload_0..3`, `iconst_m1` / `iconst_0..5`, `iadd`, `isub`, `imul`, `ineg`, and a final `ireturn`. Arithmetic is emitted with Rust wrapping operations to preserve JVM 32-bit overflow behavior.
+
+It rejects instance methods, branches, calls, field access, unsupported opcodes, oversized instruction sequences, invalid stack use, and methods whose return is not the final instruction. It does not attempt control-flow reconstruction or infer gameplay semantics. The analyzer displays generated Rust for methods in this exact subset.
+
+CI runs a TypeScript-level translator test with positive and negative cases, plus Rust tests for the emitted arithmetic's overflow behavior. This is a genuine but intentionally tiny bytecode translator. Its output is currently a standalone Rust helper preview, not yet wired to a Minecraft event or packaged as a gameplay mod.
