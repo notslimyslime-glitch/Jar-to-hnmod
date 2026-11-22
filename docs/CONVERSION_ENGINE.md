@@ -24,7 +24,7 @@ A general Java-to-Rust translator cannot be honestly promised as a one-shot feat
 
 ## Current limitation
 
-The project currently stops after inspection. It does not yet generate an `.hnmod`. The next milestone is a tested translator for one small, clearly bounded mod behavior, not a fake universal converter. AppleSkin's working HNMOD can serve as a comparison fixture, but it is not a generic conversion rule.
+The project now has an experimental metadata-only `.hnmod` path. It is not yet a gameplay converter. The next milestone is to validate that tiny output against the exact pinned Horizon Mixins toolchain, then build a translator for one small, clearly bounded gameplay behavior. AppleSkin's working HNMOD can serve as a comparison fixture, but it is not a generic conversion rule.
 
 
 ## Pinned Horizon hook catalog
@@ -92,8 +92,8 @@ Before writing an archive, the packager checks the lowercase mod id, version, ex
 
 ## First bounded translator: Fabric metadata bridge
 
-`lib/fabric-metadata-translator.ts` implements a deliberately narrow first conversion: a Fabric JAR with no `.class` files, no declared Mixin configs and no entrypoints can become a native Mods-list registration. It carries only the Fabric id, version, display name and description into a small Rust helper injected at Horizon's pinned `native_mods` hook.
+`lib/fabric-metadata-translator.ts` implements a deliberately narrow first conversion: a Fabric JAR with no `.class` files, no declared Mixin configs and no entrypoints can become a native Mods-list registration. It carries only the Fabric id, version, display name and description into a small Rust helper injected through Horizon's versioned `mods` hook (`hook_version = 1`), resolved from the pinned workspace's `native-hooks.json`.
 
 The `/api/convert` endpoint re-reads the uploaded archive with CRC checking, enforces the existing archive size/path limits, rejects executable Java/Mixin behavior, and packages the generated source through the validated HNMOD packager. The results page offers this path only when the scan indicates the JAR fits the narrow metadata-only boundary.
 
-This is **not a gameplay port**. It does not carry over assets, dependencies, settings or Java behavior. The output is marked experimental and must not be called a supported conversion until the generated helper and injection pass the pinned Horizon Mixins plan/apply and Rust compile tests.
+This is **not a gameplay port**. It does not carry over assets, dependencies, settings or Java behavior. The output is marked experimental and must not be called a supported conversion until the generated helper and injection pass the pinned Horizon Mixins plan/apply and Rust compile tests. The manifest uses the named hook contract rather than a raw function path, so an incompatible hook version is rejected during planning.
