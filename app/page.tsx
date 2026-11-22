@@ -75,7 +75,7 @@ export default function Home() {
         const data = await response.json();
         throw new Error(data.error || "No supported conversion path was found.");
       }
-      const outputName = response.headers.get("X-Output-Filename") || file.name.replace(/\\.jar$/i, ".hmod");
+      const outputName = response.headers.get("X-Output-Filename") || file.name.replace(/\.jar$/i, ".hmod");
       const kind = response.headers.get("X-Conversion-Status") || "converted";
       const blob = await response.blob();
       const url = URL.createObjectURL(blob); const a = document.createElement("a");
