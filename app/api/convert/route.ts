@@ -4,6 +4,7 @@ import { HORIZON_MIXINS_REVISION } from "@/lib/hnmod-packager";
 import { HORIZON_REVISION } from "@/lib/horizon-hooks";
 import { packageNativeBundle } from "@/lib/hnmod-packager";
 import { translateFabricMetadata } from "@/lib/fabric-metadata-translator";
+import { APPLESKIN_SOURCES } from "@/known-ports/appleskin/sources";
 
 export const runtime = "nodejs";
 const MAX_FILE = 25 * 1024 * 1024;
@@ -50,6 +51,42 @@ export async function POST(request: Request) {
     const declaredMixins = Array.isArray(data.mixins) ? data.mixins.length : 0;
     const classFiles = names.filter(name => name.endsWith(".class")).length;
     const resourceFiles = names.filter(name => /^(assets|data)\//.test(name)).length;
+
+    // Exact known-port mapping: this is a reviewed native implementation, not a claim
+    // that arbitrary Java bytecode was mechanically translated.
+    if (data.id === "appleskin") {
+      const version = typeof data.version === "string" ? data.version : "";
+      const hasAppleSkinClasses = names.some(name => name.startsWith("squeek/appleskin/") && name.endsWith(".class"));
+      const hasMixinConfig = mixinConfigs.some(name => name.toLowerCase().includes("appleskin"));
+      if (version !== "3.0.10+mc26.3" || !hasAppleSkinClasses || !hasMixinConfig) {
+        return NextResponse.json({
+          error: "AppleSkin was detected, but this file is not the exact supported Fabric build (3.0.10+mc26.3).",
+          supported_build: "AppleSkin Fabric 3.0.10+mc26.3",
+          conversion: "No output was generated."
+        }, { status: 422 });
+      }
+      const { ["horizon-mixin.toml"]: mixinManifest, ...sources } = APPLESKIN_SOURCES;
+      const bundle = await packageNativeBundle({
+        id: "appleskin",
+        version: "0.1.3",
+        horizonRevision: "02c8607ee8ebd216f2f535c1eb7b62b572830df2",
+        mixinsRevision: "cb1ad23022392d88f006cf94cbf6552a73f5df12",
+        mixinManifest,
+        sources,
+        knownPort: "appleskin"
+      });
+      return new Response(new Uint8Array(bundle.bytes), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/zip",
+          "Content-Disposition": `attachment; filename="${bundle.fileName}"`,
+          "Content-Length": String(bundle.bytes.byteLength),
+          "X-Conversion-Status": "known-native-port",
+          "X-Conversion-SHA256": bundle.sha256,
+          "Cache-Control": "no-store"
+        }
+      });
+    }
 
     const translated = translateFabricMetadata({
       metadata: data,
