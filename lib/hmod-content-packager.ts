@@ -45,7 +45,8 @@ export async function packageAssetHmod(input: {
 
   let total = 0;
   for (const file of input.files) {
-    const path = file.path.replace(/\\/g, "/");
+    assert(!file.path.includes("\\"), `Unsupported Horizon resource path: ${file.path}`);
+    const path = file.path;
     const parts = path.split("/");
     assert(path.startsWith("assets/") && parts.length >= 3, `Unsupported asset path: ${path}`);
     assert(parts[1] === input.id, `Asset namespace "${parts[1]}" does not match mod id "${input.id}".`);
