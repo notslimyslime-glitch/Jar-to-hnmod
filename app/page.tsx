@@ -45,7 +45,7 @@ export default function Home() {
       const assets = response.headers.get("X-Conversion-Assets") || "0";
       const blob = await response.blob();
       const url = URL.createObjectURL(blob); const a = document.createElement("a");
-      a.href = url; a.download = file.name.replace(/\\.jar$/i, ".hmod"); a.click();
+      a.href = url; a.download = file.name.replace(/\.jar$/i, ".hmod"); a.click();
       URL.revokeObjectURL(url);
       setConversionNotice(`Horizon .hmod created with ${assets} passive asset files. Java code and gameplay behavior were not converted.`);
     } catch (e) { setConversionError(e instanceof Error ? e.message : "HMOD conversion failed."); }
