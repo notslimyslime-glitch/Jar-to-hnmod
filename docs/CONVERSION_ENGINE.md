@@ -25,3 +25,13 @@ A general Java-to-Rust translator cannot be honestly promised as a one-shot feat
 ## Current limitation
 
 The project currently stops after inspection. It does not yet generate an `.hnmod`. The next milestone is a tested translator for one small, clearly bounded mod behavior, not a fake universal converter. AppleSkin's working HNMOD can serve as a comparison fixture, but it is not a generic conversion rule.
+
+
+## Pinned Horizon hook catalog
+
+The analyzer also exposes the 13 named native hooks from Horizon revision
+`ba6344a59cb9e755b730dcf02285fc0d33b97d3c`. The catalog is copied into
+`lib/horizon-hooks.ts` and the same revision is shown in each scan report.
+These hooks are verified native extension points, not inferred mappings from
+Java mixin names. A future translator must prove that a Java behavior matches a
+hook's signature, timing, and data contract before generating an injection.
