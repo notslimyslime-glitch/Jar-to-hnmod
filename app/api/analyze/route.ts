@@ -23,7 +23,8 @@ export async function POST(request: Request) {
     for (const entry of entries) {
       const name = entry.name.replaceAll("\\", "/");
       if (name.startsWith("/") || name.split("/").includes("..")) return NextResponse.json({ error: "Archive contains an unsafe path." }, { status: 400 });
-      expanded += entry._data?.uncompressedSize ?? 0;
+      const zipMeta = entry as unknown as { _data?: { uncompressedSize?: number } };
+      expanded += zipMeta._data?.uncompressedSize ?? 0;
       if (expanded > MAX_EXPANDED) return NextResponse.json({ error: "Expanded archive is too large." }, { status: 413 });
     }
 
