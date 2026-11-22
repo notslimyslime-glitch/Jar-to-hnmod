@@ -77,3 +77,15 @@ for selecting a native hook.
 The current registry intentionally contains no `supported` rules. The analyzer reports matched evidence and explains why each pattern is blocked. This is deliberate: a detected annotation is not a converted behavior, and generating placeholder Rust would create a misleading HNMOD.
 
 The next implementation milestone is a tiny end-to-end fixture: a known Java pattern, a reviewed mapping to one pinned Horizon hook, generated Rust, and a compile/test check. Only after that fixture passes should its registry entry become `supported`.
+
+## Native HNMOD packaging boundary
+
+The engine now has a deterministic source-bundle packager in `lib/hnmod-packager.ts`. It follows the public Horizon native-mod template's archive layout:
+
+- `horizon-native.json` at the archive root, with schema, mod id/version, game version, and pinned Horizon/Horizon Mixins revisions.
+- One `mixins/<mod-id>/horizon-mixin.toml` manifest.
+- Only explicitly supplied `.rs` and `.toml` source files under that bundle directory.
+
+Before writing an archive, the packager checks the lowercase mod id, version, exact pinned revisions, manifest identity/revision, safe source filenames, non-empty source contents, size limits, and that every `source`/`helper` named by the manifest exists. It uses fixed ZIP timestamps and sorted entries for repeatable output.
+
+**Important:** packaging is not translation. The packager refuses an empty source bundle and does not invent Rust code. It is the final packaging stage that a future verified translator can call. The current Java/Mixin rules remain unverified, so this addition does not make arbitrary JARs convertible yet.
