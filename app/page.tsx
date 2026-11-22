@@ -73,16 +73,19 @@ export default function Home() {
       const response = await fetch("/api/convert-auto", { method: "POST", body });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "No supported conversion path was found.");
+        const detail = typeof data.details === "string" ? data.details : Array.isArray(data.details) ? data.details.join("\\n") : "";
+        throw new Error([data.error || "No supported conversion path was found.", detail].filter(Boolean).join("\\n\\n"));
       }
       const outputName = response.headers.get("X-Output-Filename") || file.name.replace(/\.jar$/i, ".hmod");
       const kind = response.headers.get("X-Conversion-Status") || "converted";
       const blob = await response.blob();
       const url = URL.createObjectURL(blob); const a = document.createElement("a");
       a.href = url; a.download = outputName; a.click(); URL.revokeObjectURL(url);
-      setConversionNotice(kind === "known-native-port-starling-0.9.0"
-        ? "A reviewed AppleSkin native bundle was built. Install it and test it in Starling."
-        : "Passive assets were packaged as a Horizon .hmod. Java gameplay code was not converted.");
+      setConversionNotice(kind === "porter-generated-candidate"
+        ? "Horizon Porter generated a candidate ZIP. Open PORTING.md inside it: Java behavior may still be unfinished and the mod is not yet verified in Starling."
+        : kind === "known-native-port-starling-0.9.0"
+          ? "A reviewed AppleSkin native bundle was built. Install it and test it in Starling."
+          : "Passive assets were packaged as a Horizon .hmod. Java gameplay code was not converted.");
     } catch (e) { setConversionError(e instanceof Error ? e.message : "Automatic conversion failed."); }
     finally { setConverting(false); }
   }
