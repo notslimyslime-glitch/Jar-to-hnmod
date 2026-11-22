@@ -106,3 +106,10 @@ This is **not a gameplay port**. It does not carry over assets, data files, depe
 Before writing a bundle, the packager checks each named injection against the pinned `HORIZON_HOOKS` catalog. Unknown hook names, missing versions, mismatched contract versions, and mixing a named hook with a raw target are rejected early. This is a local catalog consistency check only; it does not replace Horizon Mixins `plan`, `apply`, or Rust compilation.
 The same preflight also rejects raw `target` paths that are not listed in that pinned catalog. This prevents a manifest from quietly pointing at a renamed or unrelated Horizon method. It remains a catalog guard, not a semantic compatibility proof.
 
+
+
+## Pinned native bridge compile fixture
+
+The repository now includes `fixtures/native-bridge`, a tiny Rust workspace that mirrors the exact type shape used by the metadata bridge: a `Game::native_mods` hook and Horizon's `NativeMod` record. Its named-hook catalog and compatibility stamp are pinned to the same Horizon and Horizon Mixins revisions as the packager.
+
+CI checks the fixture twice with the pinned Horizon Mixins 0.6.0 CLI: first it builds a plan from the named hook, then it stages and compiles the injected helper with `check --trust-native-mods`. This proves the adapter's Rust signature, binding, manifest and packaging assumptions against the pinned mixin engine in a controlled fixture. It does **not** prove conversion of arbitrary Fabric code or gameplay behavior, and it does not replace a full build against Horizon's complete game workspace.
