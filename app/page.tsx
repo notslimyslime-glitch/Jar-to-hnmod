@@ -7,7 +7,7 @@ type Report = {
   detected: {
     platform: string; mod_id: string | null; version: string | null; minecraft: string | null;
     dependencies: string[]; entrypoints: Record<string, string[]>; mixin_configs: string[];
-    mixin_classes: number; class_files: number; assets: number;
+    mixin_classes: number; mixin_config_details: { file: string; package: string | null; required: boolean | null; compatibility_level: string | null; refmap: string | null; plugin: string | null; common: string[]; client: string[]; server: string[]; error?: string }[]; class_files: number; assets: number;
     bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; member_references_seen: number; api_surface: { name: string; references: number; examples: string[] }[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
   };
   horizon: { revision: string; hooks: { name: string; version: number; target: string }[] };
@@ -85,6 +85,17 @@ export default function Home() {
       </div>
       <div className="report-grid"><div className="report-card"><h3>DETECTED DEPENDENCIES</h3>{report.detected.dependencies.length ? report.detected.dependencies.map(x => <span className="tag" key={x}>{x}</span>) : <p>None detected</p>}</div>
       <div className="report-card"><h3>ENTRYPOINTS</h3>{Object.entries(report.detected.entrypoints).map(([k,v]) => <p key={k}><b>{k}</b> · {v.join(", ")}</p>)}{!Object.keys(report.detected.entrypoints).length && <p>None detected</p>}</div></div>
+      <div className="report-card"><h3>MIXIN CONFIG DISCOVERY</h3>
+        <p>Declared targets are grouped by common, client and server config sections. This reads config metadata only; injection annotations and actual method behavior still need deeper inspection.</p>
+        {report.detected.mixin_config_details?.length ? report.detected.mixin_config_details.map(config => <div key={config.file}>
+          <p><b>{config.file}</b>{config.package ? " · " + config.package : ""}</p>
+          {config.error ? <p>{config.error}</p> : <>
+            <p>Required: {config.required === null ? "unspecified" : String(config.required)} · Compatibility: {config.compatibility_level || "unspecified"} · Refmap: {config.refmap || "none"}</p>
+            {config.plugin && <p>Plugin: {config.plugin}</p>}
+            <p>Common: {config.common.join(", ") || "none"}<br/>Client: {config.client.join(", ") || "none"}<br/>Server: {config.server.join(", ") || "none"}</p>
+          </>}
+        </div>) : <p>No Mixin config details found.</p>}
+      </div>
       <div className="report-card"><h3>BYTECODE DISCOVERY</h3>
         <p>Referenced Java types: {report.detected.bytecode_inspection?.referenced_types.slice(0, 12).join(", ") || "None extracted"}</p>
         <p>Skipped or unreadable classes: {report.detected.bytecode_inspection?.skipped_or_unreadable ?? 0}</p>
