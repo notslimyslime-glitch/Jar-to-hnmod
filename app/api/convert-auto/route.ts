@@ -25,7 +25,13 @@ export async function POST(request: Request) {
     const nativeResponse = await convertNative(new Request("http://internal/api/convert", {
       method: "POST", body: nativeForm
     }));
-    if (nativeResponse.ok) return nativeResponse;
+    if (nativeResponse.ok) {
+      const headers = new Headers(nativeResponse.headers);
+      const disposition = headers.get("Content-Disposition") || "";
+      const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || item.name.replace(/\\.jar$/i, ".hnmod");
+      headers.set("X-Output-Filename", filename);
+      return new Response(nativeResponse.body, { status: nativeResponse.status, headers });
+    }
 
     const assetForm = new FormData();
     assetForm.append("file", item, item.name);
