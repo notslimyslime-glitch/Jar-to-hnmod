@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 
+type AiPlan = { title: string; summary: string; confidence: "low" | "medium"; supportedAreas: string[]; needsInspection: string[]; blockers: string[]; implementationPlan: string[]; nextAction: string; };
+
 type Report = {
   file: string; size_bytes: number; sha256: string;
   detected: {
@@ -18,11 +20,14 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [report, setReport] = useState<Report | null>(null);
+  const [plan, setPlan] = useState<AiPlan | null>(null);
+  const [planning, setPlanning] = useState(false);
+  const [aiError, setAiError] = useState("");
   const input = useRef<HTMLInputElement>(null);
 
   const choose = useCallback((f?: File) => {
     if (!f) return;
-    setError(""); setReport(null);
+    setError(""); setReport(null); setPlan(null); setAiError("");
     if (!f.name.toLowerCase().endsWith(".jar")) { setFile(null); setError("Please choose a .jar file."); return; }
     if (f.size > 25 * 1024 * 1024) { setFile(null); setError("That file is over the 25 MB limit."); return; }
     setFile(f);
@@ -30,7 +35,7 @@ export default function Home() {
 
   async function analyze() {
     if (!file) return;
-    setBusy(true); setError(""); setReport(null);
+    setBusy(true); setError(""); setReport(null); setPlan(null); setAiError("");
     try {
       const body = new FormData(); body.append("file", file);
       const response = await fetch("/api/analyze", { method: "POST", body });
@@ -47,6 +52,25 @@ export default function Home() {
     const url = URL.createObjectURL(blob); const a = document.createElement("a");
     a.href = url; a.download = (report.detected.mod_id || "mod") + "-conversion-report.json"; a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function generatePlan() {
+    if (!report) return;
+    setPlanning(true); setAiError(""); setPlan(null);
+    try {
+      const response = await fetch("/api/ai-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ report })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not create an AI plan.");
+      setPlan(data.plan);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "AI planning failed.");
+    } finally {
+      setPlanning(false);
+    }
   }
 
   return <main className="shell">
@@ -82,6 +106,21 @@ export default function Home() {
       <div className="report-grid"><div className="report-card"><h3>DETECTED DEPENDENCIES</h3>{report.detected.dependencies.length ? report.detected.dependencies.map(x => <span className="tag" key={x}>{x}</span>) : <p>None detected</p>}</div>
       <div className="report-card"><h3>ENTRYPOINTS</h3>{Object.entries(report.detected.entrypoints).map(([k,v]) => <p key={k}><b>{k}</b> · {v.join(", ")}</p>)}{!Object.keys(report.detected.entrypoints).length && <p>None detected</p>}</div></div>
       <div className="notice"><span>ⓘ</span><div><b>Conversion is not generated yet</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
+      <button className="analyze" onClick={generatePlan} disabled={planning}>{planning ? "BUILDING AI PLAN…" : "ASK AI FOR A CONVERSION PLAN"} <span>✳</span></button>
+      {aiError && <div className="error">{aiError}</div>}
+      {plan && <div className="report-card ai-plan">
+        <div className="eyebrow">AI MIGRATION PLAN · {plan.confidence.toUpperCase()} CONFIDENCE</div>
+        <h3>{plan.title}</h3>
+        <p>{plan.summary}</p>
+        <div className="report-grid">
+          <div><h3>LIKELY AREAS</h3>{plan.supportedAreas.length ? <ul>{plan.supportedAreas.map((x, i) => <li key={i}>{x}</li>)}</ul> : <p>None confirmed from metadata alone.</p>}</div>
+          <div><h3>NEEDS SOURCE INSPECTION</h3>{plan.needsInspection.length ? <ul>{plan.needsInspection.map((x, i) => <li key={i}>{x}</li>)}</ul> : <p>No extra items listed.</p>}</div>
+          <div><h3>BLOCKERS</h3>{plan.blockers.length ? <ul>{plan.blockers.map((x, i) => <li key={i}>{x}</li>)}</ul> : <p>No blockers identified from the scan.</p>}</div>
+          <div><h3>IMPLEMENTATION STEPS</h3>{plan.implementationPlan.length ? <ol>{plan.implementationPlan.map((x, i) => <li key={i}>{x}</li>)}</ol> : <p>No steps returned.</p>}</div>
+        </div>
+        <div className="notice"><span>→</span><div><b>Next action</b><p>{plan.nextAction}</p></div></div>
+        <p className="fineprint">AI advice is based on archive metadata only. It is not a verified Java-to-Rust conversion and does not generate an HNMOD.</p>
+      </div>}
       {report.flags.map(f => <div className="flag" key={f.code}><b>{f.code}</b><span>{f.message}</span></div>)}
     </section>}
     <footer><span>HORIZON TOOL LAB</span><span>BUILT FOR NATIVE MODDING <b>✳</b></span></footer>
