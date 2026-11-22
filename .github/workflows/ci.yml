@@ -51,3 +51,10 @@ jobs:
             --mods fixtures/native-bridge/mods \
             --out /tmp/native-bridge-stage \
             --trust-native-mods
+
+  porter-runner-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Horizon Porter service image
+        run: docker build --tag jar-to-hnmod-porter:ci --file porter-runner/Dockerfile .
