@@ -54,14 +54,14 @@ function decodeInstructions(code: Uint8Array, cp: CpEntry[], utf: (index: number
     else if ([17,19,20,132,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,178,179,180,181,182,183,184,187,189,192,193,198,199].includes(opcode)) operands = 2;
     else if (opcode === 185 || opcode === 186 || opcode === 200 || opcode === 201 || opcode === 197) operands = opcode === 197 ? 3 : 4;
     if (opcode === 170) {
-      while ((p - start) % 4 !== 0) p++;
+      while (p % 4 !== 0) p++;
       if (p + 12 > code.length) break;
       const low = s4(p + 4), high = s4(p + 8);
       const count = high - low + 1;
       if (count < 0 || count > 100000 || p + 12 + count * 4 > code.length) break;
       p += 12 + count * 4;
     } else if (opcode === 171) {
-      while ((p - start) % 4 !== 0) p++;
+      while (p % 4 !== 0) p++;
       if (p + 8 > code.length) break;
       const pairs = s4(p + 4);
       if (pairs < 0 || pairs > 100000 || p + 8 + pairs * 8 > code.length) break;
