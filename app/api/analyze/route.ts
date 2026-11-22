@@ -56,6 +56,20 @@ export async function POST(request: Request) {
     }
     const referencedTypes = [...new Set(classInsights.flatMap(x => x.referencedClasses))].slice(0, 100);
     const methodCount = classInsights.reduce((sum, x) => sum + x.methods.length, 0);
+    const memberReferences = classInsights.flatMap(x => x.referencedMembers);
+    const apiFamilies = [
+      { name: "Minecraft", match: (owner: string) => owner.startsWith("net.minecraft.") },
+      { name: "Fabric API", match: (owner: string) => owner.startsWith("net.fabricmc.") },
+      { name: "Mixin", match: (owner: string) => owner.startsWith("org.spongepowered.asm.mixin.") },
+      { name: "Java standard library", match: (owner: string) => owner.startsWith("java.") || owner.startsWith("javax.") },
+      { name: "Kotlin", match: (owner: string) => owner.startsWith("kotlin.") },
+      { name: "Other libraries", match: (_owner: string) => true }
+    ];
+    const apiSurface = apiFamilies.map(family => ({
+      name: family.name,
+      references: memberReferences.filter(member => family.match(member.owner)).length,
+      examples: [...new Set(memberReferences.filter(member => family.match(member.owner)).map(member => member.owner + "." + member.name))].slice(0, 12)
+    })).filter(family => family.references > 0);
     const assets = names.filter(n => n.startsWith("assets/"));
     const depNames = Object.keys(depends);
     const platform = depNames.some(x => /forge|neoforge/i.test(x)) ? "Forge/NeoForge" : fabric ? "Fabric" : "Unknown";
@@ -73,7 +87,7 @@ export async function POST(request: Request) {
         minecraft: typeof depends.minecraft === "string" ? depends.minecraft : null,
         dependencies: depNames, entrypoints, mixin_configs: [...new Set([...mixinConfigs, ...declaredMixins])],
         mixin_classes: mixinClasses.length, class_files: classes.length, assets: assets.length,
-        bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
+        bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, api_surface: apiSurface, member_references_seen: memberReferences.length, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
       },
       horizon: { revision: HORIZON_REVISION, hooks: HORIZON_HOOKS },
       flags,
