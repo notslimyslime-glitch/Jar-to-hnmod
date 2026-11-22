@@ -82,7 +82,7 @@ The next implementation milestone is a tiny end-to-end fixture: a known Java pat
 
 The engine now has a deterministic source-bundle packager in `lib/hnmod-packager.ts`. It follows the public Horizon native-mod template's archive layout:
 
-- `horizon-native.json` at the archive root, with schema, mod id/version, game version, and pinned Horizon/Horizon Mixins revisions.
+- `horizon-native.json` at the archive root, with schema, mod id/version, game version, and pinned Horizon/Horizon Mixins revisions. Its JSON keys are sorted to match the official template packager.
 - One `mixins/<mod-id>/horizon-mixin.toml` manifest.
 - Only explicitly supplied `.rs` and `.toml` source files under that bundle directory.
 
