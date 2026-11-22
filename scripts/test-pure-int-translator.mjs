@@ -13,7 +13,7 @@ try {
   const cls = { name: "example.MathMod", methods: [] };
   const method = (name, descriptor, instructions, access = 0x0009) => ({
     name, descriptor, access,
-    instructions: instructions.map((mnemonic, offset) => ({ offset, opcode: 0, mnemonic }))
+    instructions: instructions.map((item, offset) => typeof item === "string" ? ({ offset, opcode: 0, mnemonic: item }) : ({ offset, opcode: 0, ...item }))
   });
 
   const add = translatePureIntMethod(cls, method("add", "(II)I", ["iload_0", "iload_1", "iadd", "ireturn"]));
@@ -30,7 +30,7 @@ try {
   assert.equal(translatePureIntMethod(cls, method("instance", "(I)I", ["iload_1", "ireturn"], 0x0001)), null);
   assert.equal(translatePureIntMethod(cls, method("branch", "(I)I", ["iload_0", "ifeq", "iconst_0", "ireturn"])), null);
   assert.equal(translatePureIntMethod(cls, method("call", "(I)I", ["iload_0", "invokestatic", "ireturn"])), null);
-  console.log("Pure integer bytecode translator tests passed.");
+  const immediates = translatePureIntMethod(cls, method("offset", "(I)I", [\n    { mnemonic: "iload", operands: [0] }, { mnemonic: "bipush", operands: [-12] }, "iadd", "ireturn"\n  ]));\n  assert.equal(immediates?.status, "translated");\n  assert.match(immediates.rust_source, /wrapping_add\\(-12\\)/);\n  const shortConstant = translatePureIntMethod(cls, method("wideConstant", "()I", [\n    { mnemonic: "sipush", operands: [1200] }, "ireturn"\n  ]));\n  assert.match(shortConstant.rust_source, /1200/);\n  console.log("Pure integer bytecode translator tests passed.");
 } finally {
   rmSync(out, { recursive: true, force: true });
 }
