@@ -91,6 +91,22 @@ export async function POST(request: Request) {
     const instructionCounts = new Map<string, number>();
     for (const item of bytecodeInstructions) instructionCounts.set(item.mnemonic, (instructionCounts.get(item.mnemonic) || 0) + 1);
     const commonInstructions = [...instructionCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,20).map(([mnemonic,count])=>({mnemonic,count}));
+    // Keep related mixin declarations and concrete JVM call sites together.
+    // This is evidence grouping only, never an automatic Java -> Rust mapping.
+    const behaviorEvidence = classInsights.flatMap(cls => cls.methods.map(method => {
+      const calls = method.instructions.filter(item => [182,183,184,185,186].includes(item.opcode) && item.member).slice(0, 16);
+      const fields = method.instructions.filter(item => [178,179,180,181].includes(item.opcode) && item.member).slice(0, 12);
+      const annotations = method.annotations.filter(item => item.descriptor.startsWith("Lorg/spongepowered/asm/mixin/"));
+      const relevantCalls = [...calls, ...fields].some(item => item.member?.owner.startsWith("net.minecraft.") || item.member?.owner.startsWith("net.fabricmc."));
+      if (!annotations.length && !relevantCalls) return null;
+      return {
+        class_name: cls.name, method_name: method.name, method_descriptor: method.descriptor,
+        evidence_status: "evidence_only",
+        mixin_annotations: annotations.map(item => ({ type: item.descriptor.split("/").pop()?.replace(";", "") || item.descriptor, values: item.values })),
+        calls: calls.map(item => ({ owner: item.member!.owner, name: item.member!.name, descriptor: item.member!.descriptor, instruction: item.mnemonic, offset: item.offset })),
+        fields: fields.map(item => ({ owner: item.member!.owner, name: item.member!.name, descriptor: item.member!.descriptor, instruction: item.mnemonic, offset: item.offset }))
+      };
+    })).filter((item): item is NonNullable<typeof item> => item !== null).slice(0, 250);
     const memberReferences = classInsights.flatMap(x => x.referencedMembers);
     const apiFamilies = [
       { name: "Minecraft", match: (owner: string) => owner.startsWith("net.minecraft.") },
@@ -122,7 +138,7 @@ export async function POST(request: Request) {
         minecraft: typeof depends.minecraft === "string" ? depends.minecraft : null,
         dependencies: depNames, entrypoints, mixin_configs: [...new Set([...mixinConfigs, ...declaredMixins])],
         mixin_classes: mixinClasses.length, mixin_config_details: mixinConfigReports, class_files: classes.length, assets: assets.length,
-        bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, api_surface: apiSurface, member_references_seen: memberReferences.length, bytecode_instructions_seen: bytecodeInstructions.length, invocation_sites_seen: invocationSites.length, field_access_sites_seen: fieldAccessSites.length, common_instructions: commonInstructions, invocation_samples: invocationSites.slice(0,120), field_access_samples: fieldAccessSites.slice(0,80), mixin_annotations: mixinAnnotations, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
+        bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, api_surface: apiSurface, member_references_seen: memberReferences.length, bytecode_instructions_seen: bytecodeInstructions.length, invocation_sites_seen: invocationSites.length, field_access_sites_seen: fieldAccessSites.length, common_instructions: commonInstructions, invocation_samples: invocationSites.slice(0,120), field_access_samples: fieldAccessSites.slice(0,80), mixin_annotations: mixinAnnotations, behavior_evidence: behaviorEvidence, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
       },
       horizon: { revision: HORIZON_REVISION, hooks: HORIZON_HOOKS },
       flags,
