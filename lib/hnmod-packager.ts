@@ -77,6 +77,7 @@ export async function packageNativeBundle(input: NativeBundleInput): Promise<Nat
   assert(SAFE_ID.test(input.id), "Mod id must use lowercase letters, digits and underscores.");
   assert(SAFE_VERSION.test(input.version), "Mod version contains unsupported characters.");
   if (input.knownPort === "appleskin") {
+    assert(input.id === "appleskin" && input.version === "0.1.3", "AppleSkin known-port identity is fixed.");
     assert(input.horizonRevision === "02c8607ee8ebd216f2f535c1eb7b62b572830df2", "AppleSkin port requires its reviewed Horizon revision.");
     assert(input.mixinsRevision === "cb1ad23022392d88f006cf94cbf6552a73f5df12", "AppleSkin port requires its reviewed Horizon Mixins revision.");
   } else {
