@@ -35,7 +35,7 @@ jobs:
       - name: Fetch the pinned Horizon Mixins toolchain
         run: |
           git clone --filter=blob:none https://github.com/horizon-rust/horizon-mixins.git /tmp/horizon-mixins
-          git -C /tmp/horizon-mixins checkout d9c83d7096b7ea5b83678da2efdfd6161f74997e
+          git -C /tmp/horizon-mixins checkout 5a64af938ec86b00d53d16a408aabc0038fb3e57
           cargo fetch --locked --manifest-path /tmp/horizon-mixins/Cargo.toml
       - name: Validate the named hook plan
         run: |
