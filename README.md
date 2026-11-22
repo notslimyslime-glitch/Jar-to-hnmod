@@ -3,20 +3,39 @@
 A Next.js web app for inspecting Minecraft Java mod JARs and preparing native Horizon conversions.
 
 ## Run locally
+
 1. Install Node.js 20+
 2. Run `npm install`
 3. Run `npm run dev`
 4. Open http://localhost:3000
 
 ## Current functionality
+
 - Drag-and-drop JAR upload
 - 25 MB upload limit, archive entry and expanded-size limits
 - ZIP path traversal checks
 - Fabric metadata, dependency, entrypoint and mixin discovery
-- Downloadable JSON analysis report
+- JVM class-file and bytecode inspection
+- Experimental, deliberately narrow Java-to-Rust translation
+- Native HNMOD packaging checks for supported metadata-only cases
 
-## Important limitation
-This first version analyzes JARs only. It does not translate arbitrary Java bytecode or mixin behavior into correct Rust native hooks, and it does not generate an HNMOD yet. Uploaded Java code is never executed. Native mods can have game-level privileges, so future generated source must be reviewed and tested.
+## Important conversion limitation
 
-## Deployment
-Import this repository into Vercel and deploy using the default Next.js settings. No environment variables are required for the analyzer-only version.
+This project does not translate arbitrary Java bytecode or Minecraft mod behavior into equivalent Rust. A JAR is never executed. Unsupported gameplay behavior must be reported as unsupported or require a verified, version-specific translator. Generated output must not be presented as a working gameplay conversion unless it has passed the native build and runtime checks.
+
+## Cloudflare Workers
+
+The app uses the OpenNext Cloudflare adapter so its Next.js pages and API route handlers can run on Cloudflare Workers.
+
+- `npm run build:worker` builds the Next.js app and adapts it for Workers.
+- `npm run preview:worker` builds and previews the Worker locally.
+- `npm run deploy:worker` builds and deploys to the authenticated Cloudflare account.
+- `npm run cf-typegen` generates Cloudflare binding types.
+
+Before deploying, authenticate Wrangler with `npx wrangler login`. Alternatively, connect this GitHub repository in Cloudflare Workers Builds and configure the build command as `npm run build:worker` and the deploy command as `npx wrangler deploy`.
+
+Do not commit Cloudflare API tokens, account credentials, or local `.dev.vars` files. Production secrets belong in Cloudflare's Worker settings.
+
+## Deployment status
+
+Cloudflare configuration is prepared in this repository. It is not deployed until a Cloudflare account is connected and a successful Worker deployment is verified.
