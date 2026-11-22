@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     if (nativeResponse.ok) {
       const headers = new Headers(nativeResponse.headers);
       const disposition = headers.get("Content-Disposition") || "";
-      const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || item.name.replace(/\\.jar$/i, ".hnmod");
+      const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || item.name.replace(/\.jar$/i, ".hnmod");
       headers.set("X-Output-Filename", filename);
       return new Response(nativeResponse.body, { status: nativeResponse.status, headers });
     }
@@ -40,7 +40,10 @@ export async function POST(request: Request) {
     }));
     if (assetResponse.ok) {
       const headers = new Headers(assetResponse.headers);
-      headers.set("X-Output-Filename", item.name.replace(/\.jar$/i, ".hmod"));
+      const disposition = headers.get("Content-Disposition") || "";
+      const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || item.name.replace(/\.jar$/i, ".hmod");
+      headers.set("X-Output-Filename", filename);
+      headers.set("X-Conversion-Status", headers.get("X-Conversion-Status") || "hmod-passive-assets");
       return new Response(assetResponse.body, { status: assetResponse.status, headers });
     }
 
