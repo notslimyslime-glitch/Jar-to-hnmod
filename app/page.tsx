@@ -8,7 +8,7 @@ type Report = {
     platform: string; mod_id: string | null; version: string | null; minecraft: string | null;
     dependencies: string[]; entrypoints: Record<string, string[]>; mixin_configs: string[];
     mixin_classes: number; mixin_config_details: { file: string; package: string | null; required: boolean | null; compatibility_level: string | null; refmap: string | null; plugin: string | null; common: string[]; client: string[]; server: string[]; error?: string }[]; class_files: number; assets: number;
-    bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; member_references_seen: number; api_surface: { name: string; references: number; examples: string[] }[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
+    bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; member_references_seen: number; api_surface: { name: string; references: number; examples: string[] }[]; mixin_annotations: { class_name: string; method_name: string | null; method_descriptor: string | null; annotation: string; values: Record<string, unknown> }[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
   };
   horizon: { revision: string; hooks: { name: string; version: number; target: string }[] };
   flags: { level: string; code: string; message: string }[];
@@ -100,6 +100,13 @@ export default function Home() {
         <p>Referenced Java types: {report.detected.bytecode_inspection?.referenced_types.slice(0, 12).join(", ") || "None extracted"}</p>
         <p>Skipped or unreadable classes: {report.detected.bytecode_inspection?.skipped_or_unreadable ?? 0}</p>
         {report.detected.bytecode_inspection?.class_samples.slice(0, 8).map(c => <p key={c.name}><b>{c.name}</b> · {c.methods.length} methods · {c.super_name || "no parent"}</p>)}
+      </div>
+      <div className="report-card"><h3>MIXIN ANNOTATION INSPECTION</h3>
+        <p>Annotations found in class and method metadata. These reveal declared targets and injection points, but do not prove that a native equivalent exists.</p>
+        {report.detected.bytecode_inspection?.mixin_annotations?.length ? report.detected.bytecode_inspection.mixin_annotations.map((item, index) => <div key={item.class_name + item.annotation + index}>
+          <p><b>{item.annotation.split("/").pop()?.replace(";", "")}</b> · {item.class_name}{item.method_name ? " :: " + item.method_name + item.method_descriptor : " · class annotation"}</p>
+          <p>{JSON.stringify(item.values)}</p>
+        </div>) : <p>No SpongePowered Mixin annotations were found in the inspected classes.</p>}
       </div>
       <div className="report-card"><h3>JAVA API SURFACE</h3>
         <p>{report.detected.bytecode_inspection?.member_references_seen ?? 0} referenced fields and methods found in class constant pools. These are static references, not proof that every member is executed.</p>
