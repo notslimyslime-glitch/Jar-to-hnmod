@@ -14,12 +14,17 @@ A Next.js web app for inspecting Minecraft Java mod JARs and preparing native Ho
 - Drag-and-drop JAR upload
 - 25 MB upload limit, archive entry and expanded-size limits
 - ZIP path traversal checks
-- Multi-loader archive identification for Fabric, Quilt, Forge, NeoForge and legacy Forge\n- Fabric metadata, dependency, entrypoint and mixin discovery
+- Multi-loader archive identification for Fabric, Quilt, Forge, NeoForge and legacy Forge
+- Fabric metadata, dependency, entrypoint and mixin discovery
 - JVM class-file and bytecode inspection
 - Experimental, deliberately narrow Java-to-Rust translation
 - Native HNMOD packaging checks for supported metadata-only cases
 
-## Loader coverage versus conversion coverage\n\nThe analyzer can identify common Fabric, Quilt, Forge and NeoForge archive formats. Identification is not conversion: the only gameplay conversion currently implemented is the reviewed, exact-version AppleSkin native port. Other JARs are inspected and classified, then rejected rather than packaged as fake working mods.\n\n## Important conversion limitation
+## Loader coverage versus conversion coverage
+
+The analyzer can identify common Fabric, Quilt, Forge and NeoForge archive formats. Identification is not conversion: the only gameplay conversion currently implemented is the reviewed, exact-version AppleSkin native port. Other JARs are inspected and classified, then rejected rather than packaged as fake working mods.
+
+## Important conversion limitation
 
 This project does not translate arbitrary Java bytecode or Minecraft mod behavior into equivalent Rust. A JAR is never executed. Unsupported gameplay behavior must be reported as unsupported or require a verified, version-specific translator. Generated output must not be presented as a working gameplay conversion unless it has passed the native build and runtime checks.
 
