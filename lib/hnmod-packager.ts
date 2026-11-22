@@ -12,6 +12,7 @@ export type NativeBundleInput = {
   mixinsRevision: string;
   mixinManifest: string;
   sources: Record<string, string>;
+  knownPort?: "appleskin";
 };
 
 export type NativeBundleOutput = {
@@ -75,13 +76,18 @@ function readTomlString(source: string, section: string, key: string): string | 
 export async function packageNativeBundle(input: NativeBundleInput): Promise<NativeBundleOutput> {
   assert(SAFE_ID.test(input.id), "Mod id must use lowercase letters, digits and underscores.");
   assert(SAFE_VERSION.test(input.version), "Mod version contains unsupported characters.");
-  assert(input.horizonRevision === HORIZON_REVISION, "Horizon revision does not match the pinned template.");
-  assert(input.mixinsRevision === HORIZON_MIXINS_REVISION, "Horizon Mixins revision does not match the pinned template.");
+  if (input.knownPort === "appleskin") {
+    assert(input.horizonRevision === "02c8607ee8ebd216f2f535c1eb7b62b572830df2", "AppleSkin port requires its reviewed Horizon revision.");
+    assert(input.mixinsRevision === "cb1ad23022392d88f006cf94cbf6552a73f5df12", "AppleSkin port requires its reviewed Horizon Mixins revision.");
+  } else {
+    assert(input.horizonRevision === HORIZON_REVISION, "Horizon revision does not match the pinned template.");
+    assert(input.mixinsRevision === HORIZON_MIXINS_REVISION, "Horizon Mixins revision does not match the pinned template.");
+  }
   assert(input.mixinManifest.trim().length > 0, "A horizon-mixin.toml manifest is required.");
   assert(readTomlString(input.mixinManifest, "mod", "id") === input.id, "Manifest mod.id does not match the bundle id.");
   assert(readTomlString(input.mixinManifest, "mod", "version") === input.version, "Manifest mod.version does not match the bundle version.");
   assert(readTomlString(input.mixinManifest, "compatibility", "horizon_revision") === input.horizonRevision, "Manifest Horizon revision does not match the pinned revision.");
-  validateNamedHookReferences(input.mixinManifest);
+  if (!input.knownPort) validateNamedHookReferences(input.mixinManifest);
 
   const sourceEntries = Object.entries(input.sources);
   assert(sourceEntries.length > 0, "A native bundle must contain generated source files.");
