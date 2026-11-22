@@ -3,7 +3,7 @@
  * Extracts structural evidence for a future Java -> Horizon/Rust translator.
  */
 export type AnnotationSummary = { descriptor: string; values: Record<string, unknown> };
-export type BytecodeInstruction = { offset: number; opcode: number; mnemonic: string; member?: { owner: string; name: string; descriptor: string; kind: "field" | "method" | "interface_method" } };
+export type BytecodeInstruction = { offset: number; opcode: number; mnemonic: string; operands?: number[]; member?: { owner: string; name: string; descriptor: string; kind: "field" | "method" | "interface_method" } };
 export type ClassSummary = {
   name: string; superName: string | null; majorVersion: number;
   annotations: AnnotationSummary[];
@@ -71,7 +71,7 @@ function decodeInstructions(code: Uint8Array, cp: CpEntry[], utf: (index: number
       p += nested === 132 ? 4 : 2;
     } else p += operands;
     if (p > code.length || p <= start) break;
-    const item: BytecodeInstruction = { offset: start, opcode, mnemonic: OPCODE_NAMES[opcode] || "reserved_" + opcode };
+    const item: BytecodeInstruction = { offset: start, opcode, mnemonic: OPCODE_NAMES[opcode] || "reserved_" + opcode };\n    if (opcode === 16) item.operands = [((u1(start + 1) << 24) >> 24)];\n    else if (opcode === 17) item.operands = [((u2(start + 1) << 16) >> 16)];\n    else if (opcode === 21) item.operands = [u1(start + 1)];
     const cpIndex = [18].includes(opcode) ? u1(start + 1) : [19,20,178,179,180,181,182,183,184,185,186].includes(opcode) ? u2(start + 1) : 0;
     if (cpIndex) {
       const member = memberAt(cpIndex);
