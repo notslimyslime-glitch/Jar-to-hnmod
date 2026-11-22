@@ -49,12 +49,14 @@ export async function POST(request: Request) {
     const mixinConfigs = names.filter(name => name.toLowerCase().endsWith(".mixins.json") || name.toLowerCase().endsWith(".mixin.json"));
     const declaredMixins = Array.isArray(data.mixins) ? data.mixins.length : 0;
     const classFiles = names.filter(name => name.endsWith(".class")).length;
+    const resourceFiles = names.filter(name => /^(assets|data)\//.test(name)).length;
 
     const translated = translateFabricMetadata({
       metadata: data,
       classFiles,
       mixinConfigs: Math.max(mixinConfigs.length, declaredMixins),
-      entrypointCount
+      entrypointCount,
+      resourceFiles
     });
 
     const bundle = await packageNativeBundle({
