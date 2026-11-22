@@ -38,7 +38,7 @@ export async function packageAssetHmod(input: {
     `description = ${tomlString(input.description || "Resource assets converted from a Java mod.")}`,
     'api = "0.2"',
     'side = "client"',
-    "capabilities = []",
+    'capabilities = ["registries"]',
     ""
   ].join("\n");
   zip.file("horizon-mod.toml", manifest, { date: FIXED_DATE, unixPermissions: 0o100644 });
