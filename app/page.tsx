@@ -8,7 +8,7 @@ type Report = {
     platform: string; mod_id: string | null; version: string | null; minecraft: string | null;
     dependencies: string[]; entrypoints: Record<string, string[]>; mixin_configs: string[];
     mixin_classes: number; class_files: number; assets: number;
-    bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
+    bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; member_references_seen: number; api_surface: { name: string; references: number; examples: string[] }[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
   };
   horizon: { revision: string; hooks: { name: string; version: number; target: string }[] };
   flags: { level: string; code: string; message: string }[];
@@ -89,6 +89,10 @@ export default function Home() {
         <p>Referenced Java types: {report.detected.bytecode_inspection?.referenced_types.slice(0, 12).join(", ") || "None extracted"}</p>
         <p>Skipped or unreadable classes: {report.detected.bytecode_inspection?.skipped_or_unreadable ?? 0}</p>
         {report.detected.bytecode_inspection?.class_samples.slice(0, 8).map(c => <p key={c.name}><b>{c.name}</b> · {c.methods.length} methods · {c.super_name || "no parent"}</p>)}
+      </div>
+      <div className="report-card"><h3>JAVA API SURFACE</h3>
+        <p>{report.detected.bytecode_inspection?.member_references_seen ?? 0} referenced fields and methods found in class constant pools. These are static references, not proof that every member is executed.</p>
+        {report.detected.bytecode_inspection?.api_surface.map(f => <div key={f.name}><p><b>{f.name}</b> · {f.references} references</p><p>{f.examples.join(", ")}</p></div>)}
       </div>
       <div className="report-card"><h3>HORIZON NATIVE HOOK CATALOG</h3>
         <p>These are real extension points from Horizon revision <b>{report.horizon.revision.slice(0, 10)}</b>. They are possible places for a native port to connect, not automatic matches for this Java mod.</p>
