@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     // If a remote Horizon Porter runner is configured, use the real Rust/Java
     // conversion pipeline before the lightweight verified fallbacks below.
-    const runnerBase = process.env.HORIZON_PORTER_RUNNER_URL?.replace(/\\/+$/, "");
+    const runnerBase = process.env.HORIZON_PORTER_RUNNER_URL?.replace(/\/+$/, "");
     const runnerToken = process.env.HORIZON_PORTER_RUNNER_TOKEN;
     if (runnerBase) {
       if (!runnerToken) {
