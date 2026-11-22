@@ -1,13 +1,15 @@
 /**
  * Minimal, non-executing JVM class-file reader.
  * Extracts structural evidence for a future Java -> Horizon/Rust translator.
- * It deliberately does not attempt to decompile or execute bytecode.
+ * It deliberately does not execute or decompile uploaded bytecode.
  */
+export type AnnotationSummary = { descriptor: string; values: Record<string, unknown> };
 export type ClassSummary = {
   name: string;
   superName: string | null;
   majorVersion: number;
-  methods: { name: string; descriptor: string; access: number }[];
+  annotations: AnnotationSummary[];
+  methods: { name: string; descriptor: string; access: number; annotations: AnnotationSummary[] }[];
   referencedClasses: string[];
   referencedMembers: { owner: string; name: string; descriptor: string; kind: "field" | "method" | "interface_method" }[];
   stringConstants: string[];
@@ -64,41 +66,101 @@ export function inspectClass(bytes: Uint8Array): ClassSummary {
     const e = cp[index];
     return e?.tag === 7 && e.a ? utf(e.a).replaceAll("/", ".") : "";
   };
-  r.u2();
+  const constant = (index: number): unknown => {
+    const e = cp[index];
+    if (!e) return null;
+    if (e.tag === 8) return e.a ? utf(e.a) : null;
+    if ([3, 4, 5, 6].includes(e.tag)) return e.value ?? null;
+    return null;
+  };
+  const readElementValue = (): unknown => {
+    const tag = String.fromCharCode(r.u1());
+    if ("BCDFIJSZs".includes(tag)) {
+      const index = r.u2();
+      return tag === "s" ? utf(index) : constant(index);
+    }
+    if (tag === "e") return { enumType: utf(r.u2()), enumName: utf(r.u2()) };
+    if (tag === "c") return { class: utf(r.u2()) };
+    if (tag === "@") return readAnnotation();
+    if (tag === "[") {
+      const n = r.u2();
+      const values: unknown[] = [];
+      for (let i = 0; i < n && i < 512; i++) values.push(readElementValue());
+      for (let i = 512; i < n; i++) readElementValue();
+      return values;
+    }
+    throw new Error("Unsupported annotation element tag " + tag);
+  };
+  const readAnnotation = (): AnnotationSummary => {
+    const descriptor = utf(r.u2());
+    const pairs = r.u2();
+    const values: Record<string, unknown> = {};
+    for (let i = 0; i < pairs; i++) {
+      const key = utf(r.u2());
+      const value = readElementValue();
+      if (key) values[key] = value;
+    }
+    return { descriptor, values };
+  };
+  const readAttributes = (onAnnotations?: (annotations: AnnotationSummary[]) => void) => {
+    const n = r.u2();
+    for (let i = 0; i < n; i++) {
+      const name = utf(r.u2());
+      const length = r.u4();
+      const start = r.position;
+      if (name === "RuntimeVisibleAnnotations" || name === "RuntimeInvisibleAnnotations") {
+        const count = r.u2();
+        const annotations: AnnotationSummary[] = [];
+        for (let j = 0; j < count; j++) annotations.push(readAnnotation());
+        onAnnotations?.(annotations);
+      }
+      const consumed = r.position - start;
+      if (consumed > length) throw new Error("Malformed class attribute length");
+      r.skip(length - consumed);
+    }
+  };
+
+  r.u2(); // access flags
   const thisClass = r.u2();
   const superClass = r.u2();
   const interfaces = r.u2();
   r.skip(interfaces * 2);
-  const skipMembers = () => {
+
+  const skipFields = () => {
     const n = r.u2();
     for (let i = 0; i < n; i++) {
       r.u2(); r.u2(); r.u2();
-      const attrs = r.u2();
-      for (let j = 0; j < attrs; j++) { r.u2(); r.skip(r.u4()); }
+      readAttributes();
     }
   };
-  skipMembers(); // fields
+  skipFields();
+
   const methodCount = r.u2();
   const methods: ClassSummary["methods"] = [];
   for (let i = 0; i < methodCount; i++) {
     const access = r.u2();
     const name = utf(r.u2());
     const descriptor = utf(r.u2());
-    methods.push({ name, descriptor, access });
-    const attrs = r.u2();
-    for (let j = 0; j < attrs; j++) { r.u2(); r.skip(r.u4()); }
+    const annotations: AnnotationSummary[] = [];
+    readAttributes(found => annotations.push(...found));
+    methods.push({ name, descriptor, access, annotations });
   }
+  const annotations: AnnotationSummary[] = [];
+  readAttributes(found => annotations.push(...found));
+
   const refs = new Set<string>();
-  for (const e of cp) if (e?.tag === 7) {
-    const name = className(cp.indexOf(e));
-    if (name && !name.startsWith("[")) refs.add(name);
+  for (let i = 1; i < cp.length; i++) {
+    const e = cp[i];
+    if (e?.tag === 7) {
+      const name = className(i);
+      if (name && !name.startsWith("[")) refs.add(name);
+    }
   }
   const members: ClassSummary["referencedMembers"] = [];
   for (const e of cp) {
     if (!e || (e.tag !== 9 && e.tag !== 10 && e.tag !== 11) || !e.a || !e.b) continue;
-    const ownerEntry = cp[e.a];
     const nameType = cp[e.b];
-    if (ownerEntry?.tag !== 7 || nameType?.tag !== 12 || !nameType.a || !nameType.b) continue;
+    if (cp[e.a]?.tag !== 7 || nameType?.tag !== 12 || !nameType.a || !nameType.b) continue;
     const owner = className(e.a);
     const name = utf(nameType.a);
     const descriptor = utf(nameType.b);
@@ -116,6 +178,7 @@ export function inspectClass(bytes: Uint8Array): ClassSummary {
     name: className(thisClass) || "unknown",
     superName: superClass ? className(superClass) : null,
     majorVersion,
+    annotations: annotations.slice(0, 100),
     methods: methods.slice(0, 100),
     referencedClasses: [...refs].slice(0, 120),
     referencedMembers: members.slice(0, 240),
