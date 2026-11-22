@@ -35,3 +35,13 @@ The analyzer also exposes the 13 named native hooks from Horizon revision
 These hooks are verified native extension points, not inferred mappings from
 Java mixin names. A future translator must prove that a Java behavior matches a
 hook's signature, timing, and data contract before generating an injection.
+
+
+## API-surface inspection
+
+The class reader now also extracts field and method references stored in JVM
+constant pools. The analyzer groups these by Minecraft, Fabric API, Mixin, Java
+standard library, Kotlin, and other library namespaces. These are static
+references only: they are not a control-flow trace and do not prove that a
+referenced member is called at runtime. This helps prioritize translator work
+without pretending to understand arbitrary Java behavior.
