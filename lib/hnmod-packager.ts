@@ -78,8 +78,8 @@ export async function packageNativeBundle(input: NativeBundleInput): Promise<Nat
   assert(SAFE_VERSION.test(input.version), "Mod version contains unsupported characters.");
   if (input.knownPort === "appleskin") {
     assert(input.id === "appleskin" && input.version === "0.1.3", "AppleSkin known-port identity is fixed.");
-    assert(input.horizonRevision === "02c8607ee8ebd216f2f535c1eb7b62b572830df2", "AppleSkin port requires its reviewed Horizon revision.");
-    assert(input.mixinsRevision === "cb1ad23022392d88f006cf94cbf6552a73f5df12", "AppleSkin port requires its reviewed Horizon Mixins revision.");
+    assert(input.horizonRevision === HORIZON_REVISION, "AppleSkin bundle must target the current Starling 0.9.0 Horizon revision.");
+    assert(input.mixinsRevision === HORIZON_MIXINS_REVISION, "AppleSkin bundle must target the current Starling 0.9.0 Horizon Mixins revision.");
   } else {
     assert(input.horizonRevision === HORIZON_REVISION, "Horizon revision does not match the pinned template.");
     assert(input.mixinsRevision === HORIZON_MIXINS_REVISION, "Horizon Mixins revision does not match the pinned template.");
