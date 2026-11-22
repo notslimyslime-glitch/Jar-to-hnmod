@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { HORIZON_MIXINS_REVISION, packageNativeBundle } from "@/lib/hnmod-packager";
 import { HORIZON_REVISION } from "@/lib/horizon-hooks";
 import { APPLESKIN_SOURCES } from "@/known-ports/appleskin/sources";
-import { createAiNativeDraft } from "@/lib/ai-native-draft";
-import { detectModPlatform } from "@/lib/mod-platform";
 
 export const runtime = "nodejs";
 const MAX_FILE = 25 * 1024 * 1024;
@@ -38,7 +36,6 @@ export async function POST(request: Request) {
       .find(path => zip.file(path));
     const manifestFile = zip.file("META-INF/MANIFEST.MF");
     const manifestText = manifestFile ? await manifestFile.async("string").catch(() => "") : "";
-    const platform = detectModPlatform({ names, manifest: manifestText });
     let metadataText = metadataPath ? await zip.file(metadataPath)!.async("string") : "";
     if (metadataText.length > 1024 * 1024) return NextResponse.json({ error: "Mod metadata is too large." }, { status: 400 });
     if (!metadataText) metadataText = manifestText.slice(0, 12000);
@@ -82,34 +79,19 @@ export async function POST(request: Request) {
           "Content-Type": "application/zip",
           "Content-Disposition": `attachment; filename="${bundle.fileName}"`,
           "Content-Length": String(bundle.bytes.byteLength),
-          "X-Conversion-Status": "known-native-port",
+          "X-Conversion-Status": "known-native-port-starling-0.9.0",
           "X-Conversion-SHA256": bundle.sha256,
           "Cache-Control": "no-store"
         }
       });
     }
 
-    // Best-effort Gemini path for other loaders and mods. Output is always marked
-    // as an unverified draft until native compilation and Starling testing exist.
-    const draft = await createAiNativeDraft({
-      zip,
-      names,
-      metadataText: metadataText || JSON.stringify({ file: item.name, note: "No loader metadata found." }),
-      platform,
-      fallbackId: item.name
-    });
-    return new Response(new Uint8Array(draft.bytes), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="${draft.fileName}"`,
-        "Content-Length": String(draft.bytes.byteLength),
-        "X-Conversion-Status": "unverified-ai-draft",
-        "X-Conversion-SHA256": draft.sha256,
-        "X-Conversion-Summary": encodeURIComponent(draft.summary.slice(0, 300)),
-        "Cache-Control": "no-store"
-      }
-    });
+    return NextResponse.json({
+      error: "No verified Starling 0.9.0 native port exists for this mod yet. No .hnmod was created. The converter only downloads a bundle when it has a real, reviewed Rust implementation.",
+      detected_mod: typeof metadata.id === "string" ? metadata.id : item.name,
+      target: "Starling 0.9.0 / Horizon native-mod API",
+      conversion: "Not converted. No placeholder bundle was generated."
+    }, { status: 422 });
   } catch (error) {
     return NextResponse.json({
       error: error instanceof Error ? error.message : "This JAR could not be converted.",
