@@ -8,7 +8,7 @@ type Report = {
     platform: string; mod_id: string | null; version: string | null; minecraft: string | null;
     dependencies: string[]; entrypoints: Record<string, string[]>; mixin_configs: string[];
     mixin_classes: number; mixin_config_details: { file: string; package: string | null; required: boolean | null; compatibility_level: string | null; refmap: string | null; plugin: string | null; common: string[]; client: string[]; server: string[]; error?: string }[]; class_files: number; assets: number;
-    bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; member_references_seen: number; api_surface: { name: string; references: number; examples: string[] }[]; mixin_annotations: { class_name: string; method_name: string | null; method_descriptor: string | null; annotation: string; values: Record<string, unknown> }[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
+    bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; member_references_seen: number; bytecode_instructions_seen: number; invocation_sites_seen: number; field_access_sites_seen: number; common_instructions: { mnemonic: string; count: number }[]; invocation_samples: { class_name: string; method_name: string; method_descriptor: string; offset: number; opcode: number; mnemonic: string; member?: { owner: string; name: string; descriptor: string; kind: string } }[]; field_access_samples: { class_name: string; method_name: string; method_descriptor: string; offset: number; opcode: number; mnemonic: string; member?: { owner: string; name: string; descriptor: string; kind: string } }[]; api_surface: { name: string; references: number; examples: string[] }[]; mixin_annotations: { class_name: string; method_name: string | null; method_descriptor: string | null; annotation: string; values: Record<string, unknown> }[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
   };
   horizon: { revision: string; hooks: { name: string; version: number; target: string }[] };
   flags: { level: string; code: string; message: string }[];
@@ -100,6 +100,14 @@ export default function Home() {
         <p>Referenced Java types: {report.detected.bytecode_inspection?.referenced_types.slice(0, 12).join(", ") || "None extracted"}</p>
         <p>Skipped or unreadable classes: {report.detected.bytecode_inspection?.skipped_or_unreadable ?? 0}</p>
         {report.detected.bytecode_inspection?.class_samples.slice(0, 8).map(c => <p key={c.name}><b>{c.name}</b> · {c.methods.length} methods · {c.super_name || "no parent"}</p>)}
+      </div>
+      <div className="report-card"><h3>BYTECODE OPERATIONS</h3>
+        <p>{report.detected.bytecode_inspection?.bytecode_instructions_seen ?? 0} JVM instructions decoded from method bodies. Found {report.detected.bytecode_inspection?.invocation_sites_seen ?? 0} invocation sites and {report.detected.bytecode_inspection?.field_access_sites_seen ?? 0} field access sites.</p>
+        <p><b>Common operations</b></p>
+        {report.detected.bytecode_inspection?.common_instructions?.map(item => <span className="tag" key={item.mnemonic}>{item.mnemonic} · {item.count}</span>)}
+        <p><b>Observed method calls</b></p>
+        {report.detected.bytecode_inspection?.invocation_samples?.slice(0, 30).map((item, index) => <p key={item.class_name + item.method_name + item.offset + index}><b>{item.mnemonic}</b> · {item.class_name} :: {item.method_name} → {item.member?.owner}.{item.member?.name}{item.member?.descriptor}</p>)}
+        <p>Only instruction sites found in decoded class files are shown. Dynamic dispatch, reflection, runtime transformations and control-flow meaning need further analysis.</p>
       </div>
       <div className="report-card"><h3>MIXIN ANNOTATION INSPECTION</h3>
         <p>Annotations found in class and method metadata. These reveal declared targets and injection points, but do not prove that a native equivalent exists.</p>
