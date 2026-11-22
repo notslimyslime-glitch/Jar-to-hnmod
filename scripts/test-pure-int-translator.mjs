@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 
 const out = mkdtempSync(join(tmpdir(), "hnmod-translator-"));
 try {
-  execFileSync("npx", ["tsc", "lib/pure-int-translator.ts", "--target", "ES2020", "--module", "commonjs", "--moduleResolution", "node", "--outDir", out, "--skipLibCheck", "--strict"], { stdio: "inherit" });
+  execFileSync("npx", ["tsc", "lib/pure-int-translator.ts", "--target", "ES2021", "--module", "commonjs", "--moduleResolution", "node", "--outDir", out, "--skipLibCheck", "--strict"], { stdio: "inherit" });
   const require = createRequire(import.meta.url);
   const { translatePureIntMethod } = require(join(out, "pure-int-translator.js"));
   const cls = { name: "example.MathMod", methods: [] };
