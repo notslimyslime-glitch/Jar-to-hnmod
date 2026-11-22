@@ -25,6 +25,12 @@ Starling 0.9.0 still imports Horizon native mods as `.hnmod` bundles, but it use
 
 The AppleSkin bundle is now pinned to the Starling 0.9.0 Horizon revision and uses the current Horizon Mixins revision. This is a compatibility retarget, not proof of a successful native build. It must still pass the full native build and an in-game Starling 0.9.0 test before it can be called working.
 
+## Horizon Porter integration
+
+We have identified [Horizon Porter](https://github.com/kevinbonomi2-bit/horizon-porter) as the stronger upstream conversion engine. Its Rust crates cover Java mod analysis, content conversion, Mixin mapping, native bundle generation and optional AI-assisted method translation. Integration requirements and compatibility gates are documented in [docs/HORIZON-PORTER-INTEGRATION.md](docs/HORIZON-PORTER-INTEGRATION.md).
+
+This is an integration plan, not a claim that the Porter is already running on this website. The current Cloudflare Worker cannot execute its native Rust/Java/Cargo pipeline. A separate Rust job runner and a verified Starling 0.9.0 API target are required before generated downloads can be enabled.
+
 ## Deterministic conversion policy
 
 There is no AI service, external model call, API key, or paid conversion dependency.
