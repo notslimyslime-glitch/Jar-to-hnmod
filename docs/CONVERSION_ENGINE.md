@@ -55,3 +55,12 @@ a concrete evidence bundle instead of unrelated lists. Each group is explicitly
 labelled `evidence_only`: it does not establish control flow, runtime execution,
 semantic equivalence, or a Horizon hook match. No Rust is generated from these
 groups until a versioned translator has a verified fixture and validation.
+
+
+## Typed native hook contracts
+
+The hook catalog now records the signatures, API introduction versions, event
+timing and purpose documented beside Horizon's actual hook definitions at the
+pinned revision. A future translation rule must satisfy all four dimensions.
+A Java method name or a Mixin target name alone is never sufficient evidence
+for selecting a native hook.
