@@ -3,6 +3,24 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
+// Best-effort per-instance guard. Also configure an edge rate limit and an AI Gateway spend limit before public launch.
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT = 5;
+const requestCounts = new Map<string, { count: number; resetAt: number }>();
+
+function withinRateLimit(request: Request): boolean {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const now = Date.now();
+  const current = requestCounts.get(ip);
+  if (!current || current.resetAt <= now) {
+    requestCounts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (current.count >= RATE_LIMIT) return false;
+  current.count += 1;
+  return true;
+}
+
 type ScanReport = {
   file?: string;
   size_bytes?: number;
@@ -35,7 +53,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json() as { report?: ScanReport };
+    const rawBody = await request.text();\n    if (rawBody.length > 32_768) return NextResponse.json({ error: "Request is too large." }, { status: 413 });\n    const body = JSON.parse(rawBody) as { report?: ScanReport };
     const input = body?.report;
     if (!input || typeof input !== "object" || !input.detected) {
       return NextResponse.json({ error: "A valid scan report is required." }, { status: 400 });
