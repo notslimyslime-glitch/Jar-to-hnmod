@@ -3,7 +3,7 @@ import { HORIZON_HOOKS } from "@/lib/horizon-hooks";
 
 export const HORIZON_GAME_VERSION = "26.3";
 export const HORIZON_REVISION = "ba6344a59cb9e755b730dcf02285fc0d33b97d3c";
-export const HORIZON_MIXINS_REVISION = "d9c83d7096b7ea5b83678da2efdfd6161f74997e";
+export const HORIZON_MIXINS_REVISION = "5a64af938ec86b00d53d16a408aabc0038fb3e57";
 
 export type NativeBundleInput = {
   id: string;
