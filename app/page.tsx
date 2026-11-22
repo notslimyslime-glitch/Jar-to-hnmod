@@ -47,7 +47,7 @@ export default function Home() {
     finally { setBusy(false); }
   }
 
-  async function convertMetadataOnly() {
+  async function convertJar() {
     if (!file) return;
     setConverting(true); setConversionError("");
     try {
@@ -56,7 +56,7 @@ export default function Home() {
       if (!response.ok) { const data = await response.json(); throw new Error(data.error || "Conversion failed."); }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob); const a = document.createElement("a");
-      a.href = url; a.download = (report?.detected.mod_id || "mod") + "-metadata-bridge.hnmod"; a.click();
+      a.href = url; a.download = file.name.replace(/\\.jar$/i, ".hnmod"); a.click();
       URL.revokeObjectURL(url);
     } catch (e) { setConversionError(e instanceof Error ? e.message : "Conversion failed."); }
     finally { setConverting(false); }
@@ -88,7 +88,9 @@ export default function Home() {
           <div className="limits">JAR FILES ONLY <i>·</i> MAX 25 MB <i>·</i> NO CODE EXECUTION</div>
         </div>
         {error && <div className="error">{error}</div>}
+        <button className="analyze" disabled={!file || converting} onClick={convertJar}>{converting ? "BUILDING NATIVE MOD…" : "CONVERT TO .HNMOD"} <span>↓</span></button>
         <button className="analyze" disabled={!file || busy} onClick={analyze}>{busy ? "SCANNING ARCHIVE…" : "ANALYZE MOD"} <span>→</span></button>
+        {conversionError && <div className="error">{conversionError}</div>}
         <p className="fineprint">Analysis checks metadata, dependencies, mixin declarations and archive contents. It does not run the uploaded mod.</p>
       </div>
     </section>
@@ -169,10 +171,14 @@ export default function Home() {
       <div className="notice"><span>ⓘ</span><div><b>Native translation is still in development</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
       {report.detected.platform === "Fabric" && report.detected.mod_id && report.detected.version && (() => {
         const metadataOnly = report.detected.class_files === 0 && report.detected.assets === 0 && report.detected.mixin_configs.length === 0 && Object.keys(report.detected.entrypoints).length === 0;
-        return <div className="report-card"><h3>{metadataOnly ? "EXPERIMENTAL METADATA-ONLY CONVERSION" : "NATIVE CONVERSION STATUS"}</h3>
-          {metadataOnly ? <>
+        const appleSkinSupported = report.detected.mod_id === "appleskin" && report.detected.version === "3.0.10+mc26.3";
+        return <div className="report-card"><h3>{appleSkinSupported ? "SUPPORTED NATIVE PORT" : metadataOnly ? "EXPERIMENTAL METADATA-ONLY CONVERSION" : "NATIVE CONVERSION STATUS"}</h3>
+          {appleSkinSupported ? <>
+            <p><b>AppleSkin Fabric 3.0.10+mc26.3 has a reviewed native Horizon implementation.</b> The service packages that implementation into a real .hnmod bundle. This is a version-specific known port, not arbitrary Java bytecode translation.</p>
+            <button className="analyze" disabled={converting} onClick={convertJar}>{converting ? "BUILDING HNMOD…" : "DOWNLOAD APPLESKIN .HNMOD"} <span>↓</span></button>
+          </> : metadataOnly ? <>
             <p>This JAR has no Java classes, assets, entrypoints or declared Mixin configs. The prototype can carry its display name, version and description into a native Horizon Mods-list entry. This does not port gameplay or assets, and the generated native code still needs the pinned Horizon Mixins compile test.</p>
-            <button className="analyze" disabled={converting} onClick={convertMetadataOnly}>{converting ? "GENERATING HNMOD…" : "GENERATE .HNMOD"} <span>→</span></button>
+            <button className="analyze" disabled={converting} onClick={convertJar}>{converting ? "GENERATING HNMOD…" : "GENERATE .HNMOD"} <span>→</span></button>
           </> : <>
             <p><b>This JAR cannot be converted by the current prototype yet.</b> The visible Analyze button only inspects a mod. The current .hnmod generator supports metadata-only Fabric JARs, not Java gameplay code, Mixins, entrypoints or bundled assets.</p>
             <p>Detected: {report.detected.class_files} Java classes · {report.detected.mixin_configs.length} Mixin configs · {Object.values(report.detected.entrypoints).reduce((n, values) => n + values.length, 0)} entrypoints · {report.detected.assets} assets.</p>
