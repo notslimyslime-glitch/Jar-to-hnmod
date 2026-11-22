@@ -45,6 +45,31 @@ export async function POST(request: Request) {
     const mixinConfigs = names.filter(n => n.toLowerCase().endsWith(".mixins.json") || n.toLowerCase().endsWith(".mixin.json"));
     const mixinClasses = names.filter(n => /mixin/i.test(n) && n.endsWith(".class"));
     const classes = names.filter(n => n.endsWith(".class"));
+    const mixinConfigReports: { file: string; package: string | null; required: boolean | null; compatibility_level: string | null; refmap: string | null; plugin: string | null; common: string[]; client: string[]; server: string[]; error?: string }[] = [];
+    const configNames = [...new Set([...mixinConfigs, ...declaredMixins])];
+    for (const configName of configNames.slice(0, 40)) {
+      const configFile = zip.file(configName);
+      if (!configFile) { mixinConfigReports.push({ file: configName, package: null, required: null, compatibility_level: null, refmap: null, plugin: null, common: [], client: [], server: [], error: "Declared config file was not found in the archive." }); continue; }
+      try {
+        const raw = await configFile.async("string");
+        if (raw.length > 1024 * 1024) throw new Error("Config exceeds 1 MB.");
+        const parsed: unknown = JSON.parse(raw);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Config root must be an object.");
+        const obj = parsed as Record<string, unknown>;
+        const list = (value: unknown) => Array.isArray(value) ? value.map(item => typeof item === "string" ? item : item && typeof item === "object" && "class" in item ? String((item as {class: unknown}).class) : "").filter(Boolean).slice(0, 300) : [];
+        mixinConfigReports.push({
+          file: configName,
+          package: typeof obj.package === "string" ? obj.package : null,
+          required: typeof obj.required === "boolean" ? obj.required : null,
+          compatibility_level: typeof obj.compatibilityLevel === "string" ? obj.compatibilityLevel : null,
+          refmap: typeof obj.refmap === "string" ? obj.refmap : null,
+          plugin: typeof obj.plugin === "string" ? obj.plugin : null,
+          common: list(obj.mixins), client: list(obj.client), server: list(obj.server)
+        });
+      } catch (error) {
+        mixinConfigReports.push({ file: configName, package: null, required: null, compatibility_level: null, refmap: null, plugin: null, common: [], client: [], server: [], error: error instanceof Error ? error.message : "Invalid mixin config." });
+      }
+    }
     const classInsights: ReturnType<typeof inspectClass>[] = [];
     let unreadableClasses = 0;
     for (const entry of entries.filter(x => x.name.endsWith(".class")).slice(0, 200)) {
@@ -86,12 +111,12 @@ export async function POST(request: Request) {
         version: typeof metadata.version === "string" ? metadata.version : null,
         minecraft: typeof depends.minecraft === "string" ? depends.minecraft : null,
         dependencies: depNames, entrypoints, mixin_configs: [...new Set([...mixinConfigs, ...declaredMixins])],
-        mixin_classes: mixinClasses.length, class_files: classes.length, assets: assets.length,
+        mixin_classes: mixinClasses.length, mixin_config_details: mixinConfigReports, class_files: classes.length, assets: assets.length,
         bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, api_surface: apiSurface, member_references_seen: memberReferences.length, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
       },
       horizon: { revision: HORIZON_REVISION, hooks: HORIZON_HOOKS },
       flags,
-      conversion: { status:"analysis_only", hnmod_generated:false, reason:"The scanner now inspects JVM class structure, method signatures, referenced types and string constants. This is evidence for translation, not a Java-to-Rust compiler.", next_step:"Build verified translators for specific Minecraft APIs and map each behavior to supported Horizon hooks. Unsupported code must remain clearly marked instead of being packaged as a working mod." }
+      conversion: { status:"analysis_only", hnmod_generated:false, reason:"The scanner now inspects JVM class structure, method signatures, referenced types, member references and Mixin configuration declarations. This is evidence for translation, not a Java-to-Rust compiler.", next_step:"Build verified translators for specific Minecraft APIs and map each behavior to supported Horizon hooks. Unsupported code must remain clearly marked instead of being packaged as a working mod." }
     });
   } catch {
     return NextResponse.json({ error: "Could not read this archive. Make sure it is a valid JAR file." }, { status: 400 });
