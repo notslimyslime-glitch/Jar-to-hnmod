@@ -9,6 +9,7 @@ export type ClassSummary = {
   majorVersion: number;
   methods: { name: string; descriptor: string; access: number }[];
   referencedClasses: string[];
+  referencedMembers: { owner: string; name: string; descriptor: string; kind: "field" | "method" | "interface_method" }[];
   stringConstants: string[];
 };
 
@@ -92,6 +93,20 @@ export function inspectClass(bytes: Uint8Array): ClassSummary {
     const name = className(cp.indexOf(e));
     if (name && !name.startsWith("[")) refs.add(name);
   }
+  const members: ClassSummary["referencedMembers"] = [];
+  for (const e of cp) {
+    if (!e || (e.tag !== 9 && e.tag !== 10 && e.tag !== 11) || !e.a || !e.b) continue;
+    const ownerEntry = cp[e.a];
+    const nameType = cp[e.b];
+    if (ownerEntry?.tag !== 7 || nameType?.tag !== 12 || !nameType.a || !nameType.b) continue;
+    const owner = className(e.a);
+    const name = utf(nameType.a);
+    const descriptor = utf(nameType.b);
+    if (owner && name && descriptor) members.push({
+      owner, name, descriptor,
+      kind: e.tag === 9 ? "field" : e.tag === 11 ? "interface_method" : "method"
+    });
+  }
   const strings = new Set<string>();
   for (const e of cp) if (e?.tag === 8 && e.a) {
     const value = utf(e.a);
@@ -103,6 +118,7 @@ export function inspectClass(bytes: Uint8Array): ClassSummary {
     majorVersion,
     methods: methods.slice(0, 100),
     referencedClasses: [...refs].slice(0, 120),
+    referencedMembers: members.slice(0, 240),
     stringConstants: [...strings].slice(0, 80),
   };
 }
