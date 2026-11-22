@@ -100,3 +100,7 @@ Before writing an archive, the packager checks the lowercase mod id, version, ex
 The `/api/convert` endpoint re-reads the uploaded archive with CRC checking, enforces the existing archive size/path limits, rejects Java/Mixin behavior and resource-bearing JARs, and packages the generated source through the validated HNMOD packager. The scan counts both `assets/` and `data/` resources so the UI hides this path when it would silently drop files.
 
 This is **not a gameplay port**. It does not carry over assets, data files, dependencies, settings or Java behavior. The output is marked experimental and must not be called a supported conversion until the generated helper and injection pass the pinned Horizon Mixins plan/apply and Rust compile tests. The manifest uses the named hook contract rather than a raw function path, so an incompatible hook version is rejected during planning.
+
+## Named-hook packaging preflight
+
+Before writing a bundle, the packager checks each named injection against the pinned `HORIZON_HOOKS` catalog. Unknown hook names, missing versions, mismatched contract versions, and mixing a named hook with a raw target are rejected early. This is a local catalog consistency check only; it does not replace Horizon Mixins `plan`, `apply`, or Rust compilation.
