@@ -1,9 +1,9 @@
 import hmac
 import io
 import os
-import shutil
 import subprocess
 import tempfile
+import zipfile
 import zipfile
 from pathlib import Path
 
@@ -43,6 +43,25 @@ async def convert(file: UploadFile = File(...), authorization: str | None = Head
                 target.write(chunk)
         if total == 0:
             raise HTTPException(400, "The uploaded JAR is empty.")
+        try:
+            with zipfile.ZipFile(jar) as archive:
+                entries = archive.infolist()
+                if len(entries) > 5000:
+                    raise HTTPException(400, "JAR contains too many archive entries.")
+                expanded = 0
+                for entry in entries:
+                    name = entry.filename
+                    parts = name.rstrip("/").split("/")
+                    if (not name or name.startswith(("/", "\\\\")) or "\\\\" in name
+                            or any(part in ("", ".", "..") for part in parts)
+                            or (parts and ":" in parts[0])):
+                        raise HTTPException(400, "JAR contains an unsafe archive path.")
+                    if not entry.is_dir():
+                        expanded += entry.file_size
+                        if expanded > 100 * 1024 * 1024:
+                            raise HTTPException(413, "Expanded JAR contents exceed 100 MB.")
+        except zipfile.BadZipFile:
+            raise HTTPException(400, "The uploaded file is not a valid JAR/ZIP archive.")
 
         port_dir = root / "ported"
         packages = root / "packages"
