@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     }
 
     const hasClasses = names.some(path => path.toLowerCase().endsWith(".class"));
-    const hasMixinConfig = names.some(path => /\\.mixins?\\.json$/i.test(path));
+    const hasMixinConfig = names.some(path => /\.mixins?\.json$/i.test(path));
     const hasEntrypoints = Boolean(metadata.entrypoints && typeof metadata.entrypoints === "object" && Object.keys(metadata.entrypoints as object).length);
     const hasData = names.some(path => path.startsWith("data/"));
     if (hasClasses || hasMixinConfig || hasEntrypoints || hasData) {
