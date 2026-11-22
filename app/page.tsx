@@ -35,6 +35,23 @@ export default function Home() {
     setFile(f);
   }, []);
 
+  async function convertResourceJar() {
+    if (!file) return;
+    setConverting(true); setConversionError(""); setConversionNotice("");
+    try {
+      const body = new FormData(); body.append("file", file);
+      const response = await fetch("/api/convert-content", { method: "POST", body });
+      if (!response.ok) { const data = await response.json(); throw new Error(data.error || "HMOD conversion failed."); }
+      const assets = response.headers.get("X-Conversion-Assets") || "0";
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob); const a = document.createElement("a");
+      a.href = url; a.download = file.name.replace(/\\.jar$/i, ".hmod"); a.click();
+      URL.revokeObjectURL(url);
+      setConversionNotice(`Horizon .hmod created with ${assets} passive asset files. Java code and gameplay behavior were not converted.`);
+    } catch (e) { setConversionError(e instanceof Error ? e.message : "HMOD conversion failed."); }
+    finally { setConverting(false); }
+  }
+
   async function analyze() {
     if (!file) return;
     setBusy(true); setError(""); setReport(null);
@@ -80,7 +97,7 @@ export default function Home() {
     <section className="hero">
       <div className="eyebrow"><span className="pulse" /> JAVA IN, NATIVE OUT</div>
       <h1>Your mods.<br/><span>Beyond Java.</span></h1>
-      <p className="intro">Turn Minecraft Java mod ideas into native Horizon mods. Start by scanning a JAR to discover what can be translated.</p>
+      <p className="intro">Inspect Java mod JARs and create real Horizon packages where a safe conversion path exists. Gameplay code is not magically translated.</p>
       <div className="workspace">
         <div className="workspace-head"><div><span className="step">01</span><span className="workspace-title">MOD ANALYZER</span></div><span className="secure">◈ FILES STAY UNEXECUTED</span></div>
         <div className={"dropzone " + (file ? "has-file" : "")}
@@ -93,11 +110,12 @@ export default function Home() {
           <div className="limits">JAR FILES ONLY <i>·</i> MAX 25 MB <i>·</i> NO CODE EXECUTION</div>
         </div>
         {error && <div className="error">{error}</div>}
-        <button className="analyze" disabled={!file || converting} onClick={convertJar}>{converting ? "BUILDING NATIVE MOD…" : "CONVERT TO .HNMOD"} <span>↓</span></button>
+        <button className="analyze" disabled={!file || converting} onClick={convertJar}>{converting ? "BUILDING LEGACY PORT…" : "APPLE SKIN → LEGACY .HNMOD"} <span>↓</span></button>
+        <button className="analyze" disabled={!file || converting} onClick={convertResourceJar}>{converting ? "PACKAGING ASSETS…" : "CONVERT PASSIVE ASSETS → .HMOD"} <span>↓</span></button>
         <button className="analyze" disabled={!file || busy} onClick={analyze}>{busy ? "SCANNING ARCHIVE…" : "ANALYZE MOD"} <span>→</span></button>
         {conversionError && <div className="error">{conversionError}</div>}
         {conversionNotice && <div className="notice"><span>ⓘ</span><div><b>Download ready</b><p>{conversionNotice}</p></div></div>}
-        <p className="fineprint">Analysis checks metadata, dependencies, mixins and class-file structure. Conversion uses deterministic rules and reviewed native ports only. Unsupported mods are rejected instead of receiving fake bundles. Uploaded Java code is never executed.</p>
+        <p className="fineprint">The .hmod path currently converts passive assets only (textures, models, sounds and language files). The separate AppleSkin button creates its reviewed legacy .hnmod candidate. Java gameplay code, mixins and data files are not translated by the asset packager. Uploaded Java code is never executed.</p>
       </div>
     </section>
     {report && <section className="results">
