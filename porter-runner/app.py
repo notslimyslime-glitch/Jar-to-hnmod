@@ -21,7 +21,7 @@ def health():
 
 
 @app.post("/v1/convert")
-async def convert(file: UploadFile = File(...), authorization: str | None = Header(default=None)):
+def convert(file: UploadFile = File(...), authorization: str | None = Header(default=None)):
     if not TOKEN:
         raise HTTPException(503, "Runner is not configured with an API token.")
     supplied = (authorization or "").removeprefix("Bearer ").strip()
@@ -35,7 +35,7 @@ async def convert(file: UploadFile = File(...), authorization: str | None = Head
         jar = root / "input.jar"
         total = 0
         with jar.open("wb") as target:
-            while chunk := await file.read(1024 * 1024):
+            while chunk := file.file.read(1024 * 1024):
                 total += len(chunk)
                 if total > MAX_UPLOAD:
                     raise HTTPException(413, "JAR exceeds the 25 MB limit.")
@@ -72,14 +72,14 @@ async def convert(file: UploadFile = File(...), authorization: str | None = Head
         try:
             port = subprocess.run(
                 [PORTER, "port", str(jar), "--out", str(port_dir)],
-                cwd=root, env=env, capture_output=True, text=True, timeout=88,
+                cwd=root, env=env, capture_output=True, text=True, timeout=75,
             )
             if port.returncode != 0:
                 detail = (port.stderr or port.stdout or "Horizon Porter could not port this JAR.")[-5000:]
                 raise HTTPException(422, detail)
             pack = subprocess.run(
                 [PORTER, "package", str(port_dir), "--out", str(packages)],
-                cwd=root, env=env, capture_output=True, text=True, timeout=20,
+                cwd=root, env=env, capture_output=True, text=True, timeout=15,
             )
             if pack.returncode != 0:
                 detail = (pack.stderr or pack.stdout or "Horizon Porter could not package the result.")[-5000:]
