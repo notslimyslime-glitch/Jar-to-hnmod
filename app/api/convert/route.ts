@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
 import { HORIZON_MIXINS_REVISION } from "@/lib/hnmod-packager";
+import { HORIZON_REVISION } from "@/lib/horizon-hooks";
 import { packageNativeBundle } from "@/lib/hnmod-packager";
 import { translateFabricMetadata } from "@/lib/fabric-metadata-translator";
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
     const bundle = await packageNativeBundle({
       id: translated.id,
       version: translated.version,
-      horizonRevision: "ba6344a59cb9e755b730dcf02285fc0d33b97d3c",
+      horizonRevision: HORIZON_REVISION,
       mixinsRevision: HORIZON_MIXINS_REVISION,
       mixinManifest: translated.manifest,
       sources: translated.sources
