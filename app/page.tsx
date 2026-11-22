@@ -19,6 +19,8 @@ type Report = {
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [conversionError, setConversionError] = useState("");
   const [error, setError] = useState("");
   const [report, setReport] = useState<Report | null>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -42,6 +44,21 @@ export default function Home() {
       setReport(data);
     } catch (e) { setError(e instanceof Error ? e.message : "Something went wrong."); }
     finally { setBusy(false); }
+  }
+
+  async function convertMetadataOnly() {
+    if (!file) return;
+    setConverting(true); setConversionError("");
+    try {
+      const body = new FormData(); body.append("file", file);
+      const response = await fetch("/api/convert", { method: "POST", body });
+      if (!response.ok) { const data = await response.json(); throw new Error(data.error || "Conversion failed."); }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob); const a = document.createElement("a");
+      a.href = url; a.download = (report?.detected.mod_id || "mod") + "-metadata-bridge.hnmod"; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { setConversionError(e instanceof Error ? e.message : "Conversion failed."); }
+    finally { setConverting(false); }
   }
 
   function downloadReport() {
@@ -141,6 +158,13 @@ export default function Home() {
         <p>Rules are only marked supported after a tested Rust generator exists. This scanner currently generates no native code.</p>
       </div>
       <div className="notice"><span>ⓘ</span><div><b>Native translation is still in development</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
+      {report.detected.platform === "Fabric" && report.detected.class_files === 0 && report.detected.mixin_configs.length === 0 && Object.keys(report.detected.entrypoints).length === 0 && report.detected.mod_id && report.detected.version && <>
+        <div className="report-card"><h3>EXPERIMENTAL METADATA-ONLY CONVERSION</h3>
+          <p>This JAR has no Java classes, entrypoints or declared Mixin configs. We can carry its display name, version and description into a native Horizon Mods-list entry. This does not port gameplay or assets, and the generated native code has not yet passed the pinned Horizon Mixins compile test.</p>
+          <button className="analyze" disabled={converting} onClick={convertMetadataOnly}>{converting ? "GENERATING HNMOD…" : "GENERATE METADATA-ONLY HNMOD"} <span>→</span></button>
+          {conversionError && <div className="error">{conversionError}</div>}
+        </div>
+      </>}
       {report.flags.map(f => <div className="flag" key={f.code}><b>{f.code}</b><span>{f.message}</span></div>)}
     </section>}
     <footer><span>HORIZON TOOL LAB</span><span>BUILT FOR NATIVE MODDING <b>✳</b></span></footer>
