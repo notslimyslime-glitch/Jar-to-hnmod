@@ -65,6 +65,28 @@ export default function Home() {
     finally { setBusy(false); }
   }
 
+  async function autoConvert() {
+    if (!file) return;
+    setConverting(true); setConversionError(""); setConversionNotice("");
+    try {
+      const body = new FormData(); body.append("file", file);
+      const response = await fetch("/api/convert-auto", { method: "POST", body });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "No supported conversion path was found.");
+      }
+      const outputName = response.headers.get("X-Output-Filename") || file.name.replace(/\\.jar$/i, ".hmod");
+      const kind = response.headers.get("X-Conversion-Status") || "converted";
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob); const a = document.createElement("a");
+      a.href = url; a.download = outputName; a.click(); URL.revokeObjectURL(url);
+      setConversionNotice(kind === "known-native-port-starling-0.9.0"
+        ? "A reviewed AppleSkin native bundle was built. Install it and test it in Starling."
+        : "Passive assets were packaged as a Horizon .hmod. Java gameplay code was not converted.");
+    } catch (e) { setConversionError(e instanceof Error ? e.message : "Automatic conversion failed."); }
+    finally { setConverting(false); }
+  }
+
   async function convertJar() {
     if (!file) return;
     setConverting(true); setConversionError(""); setConversionNotice("");
@@ -110,6 +132,7 @@ export default function Home() {
           <div className="limits">JAR FILES ONLY <i>·</i> MAX 25 MB <i>·</i> NO CODE EXECUTION</div>
         </div>
         {error && <div className="error">{error}</div>}
+        <button className="analyze" disabled={!file || converting} onClick={autoConvert}>{converting ? "AUTO-CONVERTING…" : "AUTO CONVERT → BEST SUPPORTED FORMAT"} <span>↓</span></button>
         <button className="analyze" disabled={!file || converting} onClick={convertJar}>{converting ? "BUILDING LEGACY PORT…" : "APPLE SKIN → LEGACY .HNMOD"} <span>↓</span></button>
         <button className="analyze" disabled={!file || converting} onClick={convertResourceJar}>{converting ? "PACKAGING ASSETS…" : "CONVERT PASSIVE ASSETS → .HMOD"} <span>↓</span></button>
         <button className="analyze" disabled={!file || busy} onClick={analyze}>{busy ? "SCANNING ARCHIVE…" : "ANALYZE MOD"} <span>→</span></button>
