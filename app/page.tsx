@@ -10,7 +10,7 @@ type Report = {
     mixin_classes: number; mixin_config_details: { file: string; package: string | null; required: boolean | null; compatibility_level: string | null; refmap: string | null; plugin: string | null; common: string[]; client: string[]; server: string[]; error?: string }[]; class_files: number; assets: number;
     bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; member_references_seen: number; bytecode_instructions_seen: number; invocation_sites_seen: number; field_access_sites_seen: number; common_instructions: { mnemonic: string; count: number }[]; invocation_samples: { class_name: string; method_name: string; method_descriptor: string; offset: number; opcode: number; mnemonic: string; member?: { owner: string; name: string; descriptor: string; kind: string } }[]; field_access_samples: { class_name: string; method_name: string; method_descriptor: string; offset: number; opcode: number; mnemonic: string; member?: { owner: string; name: string; descriptor: string; kind: string } }[]; api_surface: { name: string; references: number; examples: string[] }[]; mixin_annotations: { class_name: string; method_name: string | null; method_descriptor: string | null; annotation: string; values: Record<string, unknown> }[]; behavior_evidence: { class_name: string; method_name: string; method_descriptor: string; evidence_status: string; mixin_annotations: { type: string; values: Record<string, unknown> }[]; calls: { owner: string; name: string; descriptor: string; instruction: string; offset: number }[]; fields: { owner: string; name: string; descriptor: string; instruction: string; offset: number }[] }[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
   };
-  horizon: { revision: string; hooks: { name: string; version: number; signature: string; timing: string; purpose: string; target: string }[] };
+  horizon: { revision: string; hooks: { name: string; version: number; api_since: number; signature: string; timing: string; purpose: string; target: string }[] };
   translation_readiness: { supported_rules: number; manual_review_rules: number; unsupported_rules: number; matched_rules: { id: string; label: string; status: string; evidence: string; reason: string }[]; status: string; explanation: string };
   flags: { level: string; code: string; message: string }[];
   conversion: { status: string; hnmod_generated: boolean; reason: string; next_step: string };
@@ -149,7 +149,7 @@ export default function Home() {
       </div>
       <div className="report-card"><h3>HORIZON NATIVE HOOK CATALOG</h3>
         <p>Verified extension contracts from Horizon revision <b>{report.horizon.revision.slice(0, 10)}</b>. A translator must match event timing and parameter meaning, not just a similar name.</p>
-        <div className="report-grid">{report.horizon.hooks.map(h => <div key={h.name}><p><b>{h.name}</b> · API v{h.version}</p><p>{h.purpose}</p><p><code>{h.signature}</code></p><p>{h.timing}</p></div>)}</div>
+        <div className="report-grid">{report.horizon.hooks.map(h => <div key={h.name}><p><b>{h.name}</b> · hook contract v{h.version} · Horizon API v{h.api_since}+</p><p>{h.purpose}</p><p><code>{h.signature}</code></p><p>{h.timing}</p></div>)}</div>
       </div>
       <div className="report-card"><h3>TRANSLATOR COVERAGE</h3>
         <p>{report.translation_readiness.explanation}</p>
