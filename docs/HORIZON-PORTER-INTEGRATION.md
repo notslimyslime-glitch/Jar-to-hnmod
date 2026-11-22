@@ -38,9 +38,9 @@ Recommended product behavior: deterministic conversion first; AI is an optional,
 
 ## Hosting constraint
 
-The current production target is a Cloudflare Worker using OpenNext. Horizon Porter is a native Rust desktop/CLI workspace. Its JAR decompiler downloads and runs Vineflower through a Java runtime; its pipeline writes directories, invokes Cargo/compiler checks and may use the local Horizon launcher. A Worker request handler cannot simply spawn that native toolchain.
+The production website is a Cloudflare Worker using OpenNext. Horizon Porter is a native Rust desktop/CLI workspace. Its JAR decompiler downloads and runs Vineflower through a Java runtime; its pipeline writes directories and invokes native tooling. A Worker request handler cannot spawn that toolchain.
 
-Therefore, importing the crates into the Next.js route or adding a Git submodule would not make conversion work. The real integration needs a separate Rust job runner/container with:
+A separate Docker runner is now implemented in `porter-runner/`. It builds the pinned Horizon Porter CLI and exposes a token-protected HTTP endpoint. The website's auto-convert route calls it when `HORIZON_PORTER_RUNNER_URL` and `HORIZON_PORTER_RUNNER_TOKEN` are configured. The runner currently performs deterministic `port` and `package` steps only; it does not run paid AI translation.
 
 1. A pinned Horizon Porter commit and pinned Starling-compatible API/toolchain.
 2. A bounded upload/job interface, isolated temporary workspaces and cleanup.
@@ -66,12 +66,12 @@ Before enabling downloads for generated native mods:
 
 Starling's in-game compile step may provide the final device-specific native build, but it does not replace correct source generation or API compatibility.
 
-## Immediate integration sequence
+## Remaining integration steps
 
-1. Keep this web repository's current safe JAR validation and honest unsupported result.
-2. Pin and vendor only the reusable Horizon Porter crates/data, retaining MIT notices, after the API compatibility gate is resolved.
-3. Add a native Rust runner outside the Cloudflare Worker.
-4. Connect the website to asynchronous jobs and downloadable `.hmod` plus `.hnmod` artifacts.
-5. Add the optional AI provider path only when users can choose it knowingly and it can be operated securely.
+1. Deploy the Docker runner from `render.yaml` or another container host.
+2. Set the runner URL and shared API token as Cloudflare Worker secrets/environment variables.
+3. Confirm the runner image builds and a real uploaded JAR produces expected packages.
+4. Resolve the Starling 0.9.0 API compatibility gate and test each candidate in-game.
+5. Add optional AI translation only when users can knowingly choose a provider and its cost.
 
-Until the runner exists, the website must not imply that Horizon Porter has been integrated or that arbitrary mods can be converted.
+The runner code is integrated, but it is not live until its container is deployed and the two website environment variables are configured. Even then, Porter output is a candidate: Java methods can remain as stubs, and arbitrary mods are not guaranteed to work.
