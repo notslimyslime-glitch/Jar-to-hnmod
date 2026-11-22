@@ -56,9 +56,9 @@ export default function Home() {
       const response = await fetch("/api/convert", { method: "POST", body });
       if (!response.ok) { const data = await response.json(); throw new Error(data.error || "Conversion failed."); }
       const conversionStatus = response.headers.get("X-Conversion-Status");
-      setConversionNotice(conversionStatus === "known-native-port"
-        ? "Reviewed AppleSkin native bundle downloaded."
-        : "Experimental AI-generated draft downloaded. It has NOT been compiled or tested in Starling.");
+      setConversionNotice(conversionStatus === "known-native-port-starling-0.9.0"
+        ? "AppleSkin bundle for Starling 0.9.0 downloaded. Native compilation and in-game behavior still need validation."
+        : "A native bundle was downloaded.");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob); const a = document.createElement("a");
       a.href = url; a.download = file.name.replace(/\.jar$/i, ".hnmod"); a.click();
@@ -97,7 +97,7 @@ export default function Home() {
         <button className="analyze" disabled={!file || busy} onClick={analyze}>{busy ? "SCANNING ARCHIVE…" : "ANALYZE MOD"} <span>→</span></button>
         {conversionError && <div className="error">{conversionError}</div>}
         {conversionNotice && <div className="notice"><span>ⓘ</span><div><b>Download ready</b><p>{conversionNotice}</p></div></div>}
-        <p className="fineprint">Analysis checks metadata, dependencies, mixins and class-file structure. AI conversion sends extracted class summaries and metadata to Google Gemini; its free-tier terms may allow submitted content to improve Google products. Do not upload private or proprietary mods. Uploaded Java code is never executed.</p>
+        <p className="fineprint">Analysis checks metadata, dependencies, mixins and class-file structure. Conversion uses deterministic rules and reviewed native ports only. Unsupported mods are rejected instead of receiving fake bundles. Uploaded Java code is never executed.</p>
       </div>
     </section>
     {report && <section className="results">
@@ -177,15 +177,11 @@ export default function Home() {
       <div className="notice"><span>ⓘ</span><div><b>Native translation is still in development</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
       {(() => {
         const appleSkinSupported = report.detected.mod_id === "appleskin" && report.detected.version === "3.0.10+mc26.3";
-        return <div className="report-card"><h3>{appleSkinSupported ? "SUPPORTED NATIVE PORT" : "GEMINI-ASSISTED EXPERIMENTAL CONVERSION"}</h3>
+        return <div className="report-card"><h3>{appleSkinSupported ? "STARLING 0.9.0 PORT CANDIDATE" : "NO VERIFIED NATIVE PORT YET"}</h3>
           {appleSkinSupported ? <>
-            <p><b>AppleSkin Fabric 3.0.10+mc26.3 has a reviewed native Horizon implementation.</b> The service packages that implementation into a real .hnmod bundle. This is a version-specific known port, not arbitrary Java bytecode translation.</p>
+            <p><b>AppleSkin Fabric 3.0.10+mc26.3 has a reviewed native Rust implementation.</b> The bundle now targets the Starling 0.9.0 Horizon revision. Starling documents compatibility adaptation for older hooks, but this bundle still needs a full native build and in-game test before it can be called working.</p>
             <button className="analyze" disabled={converting} onClick={convertJar}>{converting ? "BUILDING HNMOD…" : "DOWNLOAD APPLESKIN .HNMOD"} <span>↓</span></button>
           </> : <>
-            <p><b>AI-assisted conversion is available as an experimental attempt.</b> Gemini will inspect the JAR's metadata and decoded class-file evidence, then try to draft native Rust for a known Horizon hook. It will refuse mods it cannot map safely.</p>
-            <p>Detected: {report.detected.class_files} Java classes · {report.detected.mixin_configs.length} Mixin configs · {Object.values(report.detected.entrypoints).reduce((n, values) => n + values.length, 0)} entrypoints · {report.detected.assets} assets.</p>
-            <p><b>Important:</b> AI output is an unverified draft, not a guaranteed working port. It still needs Rust compilation and a Starling runtime test.</p>
-            <button className="analyze" disabled={converting} onClick={convertJar}>{converting ? "ASKING GEMINI TO DRAFT…" : "TRY AI CONVERSION"} <span>✦</span></button>
           </>}
           {conversionError && <div className="error">{conversionError}</div>}
         </div>;
