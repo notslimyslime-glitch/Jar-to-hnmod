@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: jar-to-hnmod-porter
+    runtime: docker
+    dockerfilePath: ./porter-runner/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: RUNNER_API_TOKEN
+        generateValue: true
+      - key: HORIZON_PORTER_BIN
+        value: /usr/local/bin/horizon-porter
