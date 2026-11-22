@@ -79,7 +79,8 @@ horizon_revision = ${tomlString(HORIZON_REVISION)}
 
 [[injection]]
 id = "register-mod"
-target = "horizon_client::game::native_hooks::Game<'_>::native_mods"
+hook = "mods"
+hook_version = 1
 kind = "HEAD"
 helper = "register.rs"
 bindings = [{ name = "mods", ty = "&mut Vec<crate::game::native_hooks::NativeMod>", value = "mods" }]
