@@ -104,3 +104,5 @@ This is **not a gameplay port**. It does not carry over assets, data files, depe
 ## Named-hook packaging preflight
 
 Before writing a bundle, the packager checks each named injection against the pinned `HORIZON_HOOKS` catalog. Unknown hook names, missing versions, mismatched contract versions, and mixing a named hook with a raw target are rejected early. This is a local catalog consistency check only; it does not replace Horizon Mixins `plan`, `apply`, or Rust compilation.
+The same preflight also rejects raw `target` paths that are not listed in that pinned catalog. This prevents a manifest from quietly pointing at a renamed or unrelated Horizon method. It remains a catalog guard, not a semantic compatibility proof.
+
