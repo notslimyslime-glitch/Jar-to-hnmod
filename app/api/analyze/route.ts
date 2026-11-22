@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { inspectClass } from "@/lib/classfile";
 import { HORIZON_HOOKS, HORIZON_REVISION } from "@/lib/horizon-hooks";
+import { assessTranslationReadiness } from "@/lib/translation-rules";
 
 export const runtime = "nodejs";
 const MAX_FILE = 25 * 1024 * 1024;
@@ -121,6 +122,7 @@ export async function POST(request: Request) {
       references: memberReferences.filter(member => family.match(member.owner)).length,
       examples: [...new Set(memberReferences.filter(member => family.match(member.owner)).map(member => member.owner + "." + member.name))].slice(0, 12)
     })).filter(family => family.references > 0);
+    const translationReadiness = assessTranslationReadiness({ platform, entrypoints, mixinAnnotations });
     const assets = names.filter(n => n.startsWith("assets/"));
     const depNames = Object.keys(depends);
     const platform = depNames.some(x => /forge|neoforge/i.test(x)) ? "Forge/NeoForge" : fabric ? "Fabric" : "Unknown";
@@ -142,6 +144,7 @@ export async function POST(request: Request) {
       },
       horizon: { revision: HORIZON_REVISION, hooks: HORIZON_HOOKS },
       flags,
+      translation_readiness: translationReadiness,
       conversion: { status:"analysis_only", hnmod_generated:false, reason:"The scanner now inspects JVM method bytecode instructions, call sites, field accesses, class structure and Mixin metadata. These are static clues, not a Java-to-Rust compiler or proof of runtime behavior.", next_step:"Build verified translators for specific Minecraft APIs and map each behavior to supported Horizon hooks. Unsupported code must remain clearly marked instead of being packaged as a working mod." }
     });
   } catch {
