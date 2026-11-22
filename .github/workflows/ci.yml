@@ -17,6 +17,7 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run lint
+      - run: npm run test:translator
       - run: npm run build
 
   native-bridge-fixture:
@@ -24,6 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Test representative translated Rust
+        run: cargo test --locked --manifest-path fixtures/pure-int-translator/Cargo.toml
       - name: Fetch the pinned Horizon Mixins toolchain
         run: |
           git clone --filter=blob:none https://github.com/horizon-rust/horizon-mixins.git /tmp/horizon-mixins
