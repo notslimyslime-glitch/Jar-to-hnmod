@@ -22,13 +22,14 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [converting, setConverting] = useState(false);
   const [conversionError, setConversionError] = useState("");
+  const [conversionNotice, setConversionNotice] = useState("");
   const [error, setError] = useState("");
   const [report, setReport] = useState<Report | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   const choose = useCallback((f?: File) => {
     if (!f) return;
-    setError(""); setConversionError(""); setReport(null);
+    setError(""); setConversionError(""); setConversionNotice(""); setReport(null);
     if (!f.name.toLowerCase().endsWith(".jar")) { setFile(null); setError("Please choose a .jar file."); return; }
     if (f.size > 25 * 1024 * 1024) { setFile(null); setError("That file is over the 25 MB limit."); return; }
     setFile(f);
@@ -49,11 +50,15 @@ export default function Home() {
 
   async function convertJar() {
     if (!file) return;
-    setConverting(true); setConversionError("");
+    setConverting(true); setConversionError(""); setConversionNotice("");
     try {
       const body = new FormData(); body.append("file", file);
       const response = await fetch("/api/convert", { method: "POST", body });
       if (!response.ok) { const data = await response.json(); throw new Error(data.error || "Conversion failed."); }
+      const conversionStatus = response.headers.get("X-Conversion-Status");
+      setConversionNotice(conversionStatus === "known-native-port"
+        ? "Reviewed AppleSkin native bundle downloaded."
+        : "Experimental AI-generated draft downloaded. It has NOT been compiled or tested in Starling.");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob); const a = document.createElement("a");
       a.href = url; a.download = file.name.replace(/\.jar$/i, ".hnmod"); a.click();
@@ -91,6 +96,7 @@ export default function Home() {
         <button className="analyze" disabled={!file || converting} onClick={convertJar}>{converting ? "BUILDING NATIVE MOD…" : "CONVERT TO .HNMOD"} <span>↓</span></button>
         <button className="analyze" disabled={!file || busy} onClick={analyze}>{busy ? "SCANNING ARCHIVE…" : "ANALYZE MOD"} <span>→</span></button>
         {conversionError && <div className="error">{conversionError}</div>}
+        {conversionNotice && <div className="notice"><span>ⓘ</span><div><b>Download ready</b><p>{conversionNotice}</p></div></div>}
         <p className="fineprint">Analysis checks metadata, dependencies, mixin declarations and archive contents. It does not run the uploaded mod.</p>
       </div>
     </section>
@@ -176,13 +182,11 @@ export default function Home() {
           {appleSkinSupported ? <>
             <p><b>AppleSkin Fabric 3.0.10+mc26.3 has a reviewed native Horizon implementation.</b> The service packages that implementation into a real .hnmod bundle. This is a version-specific known port, not arbitrary Java bytecode translation.</p>
             <button className="analyze" disabled={converting} onClick={convertJar}>{converting ? "BUILDING HNMOD…" : "DOWNLOAD APPLESKIN .HNMOD"} <span>↓</span></button>
-          </> : metadataOnly ? <>
-            <p>This JAR has no Java classes, assets, entrypoints or declared Mixin configs. The prototype can carry its display name, version and description into a native Horizon Mods-list entry. This does not port gameplay or assets, and the generated native code still needs the pinned Horizon Mixins compile test.</p>
-            <button className="analyze" disabled={converting} onClick={convertJar}>{converting ? "GENERATING HNMOD…" : "GENERATE .HNMOD"} <span>→</span></button>
           </> : <>
-            <p><b>This JAR cannot be converted by the current prototype yet.</b> The visible Analyze button only inspects a mod. The current .hnmod generator supports metadata-only Fabric JARs, not Java gameplay code, Mixins, entrypoints or bundled assets.</p>
+            <p><b>AI-assisted conversion is available as an experimental attempt.</b> Gemini will inspect the JAR's metadata and decoded class-file evidence, then try to draft native Rust for a known Horizon hook. It will refuse mods it cannot map safely.</p>
             <p>Detected: {report.detected.class_files} Java classes · {report.detected.mixin_configs.length} Mixin configs · {Object.values(report.detected.entrypoints).reduce((n, values) => n + values.length, 0)} entrypoints · {report.detected.assets} assets.</p>
-            <button className="analyze" disabled title="Gameplay translation is not implemented yet">GAMEPLAY CONVERTER NOT READY</button>
+            <p><b>Important:</b> AI output is an unverified draft, not a guaranteed working port. It still needs Rust compilation and a Starling runtime test.</p>
+            <button className="analyze" disabled={converting} onClick={convertJar}>{converting ? "ASKING GEMINI TO DRAFT…" : "TRY AI CONVERSION"} <span>✦</span></button>
           </>}
           {conversionError && <div className="error">{conversionError}</div>}
         </div>;
