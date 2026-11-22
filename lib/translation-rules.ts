@@ -59,10 +59,10 @@ export const TRANSLATION_RULES: TranslationRule[] = [
   },
   {
     id: "forge-platform",
-    label: "Forge / NeoForge integration",
+    label: "Quilt / Forge / NeoForge integration",
     status: "unsupported",
-    evidence: "Forge or NeoForge metadata",
-    reason: "No Forge/NeoForge-to-Horizon translator is implemented."
+    evidence: "Quilt, Forge or NeoForge metadata",
+    reason: "No Quilt, Forge or NeoForge-to-Horizon translator is implemented."
   }
 ];
 
@@ -83,7 +83,7 @@ export function assessTranslationReadiness(input: {
   const descriptors = input.mixinAnnotations.map(item => item.annotation);
   const matched = TRANSLATION_RULES.filter(rule => {
     if (rule.id === "fabric-entrypoints") return Object.keys(input.entrypoints).length > 0;
-    if (rule.id === "forge-platform") return /forge|neoforge/i.test(input.platform);
+    if (rule.id === "forge-platform") return /quilt|forge|neoforge/i.test(input.platform);
     return descriptors.some(descriptor => descriptor.includes(rule.evidence));
   });
   const supported = matched.filter(rule => rule.status === "supported").length;
