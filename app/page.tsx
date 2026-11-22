@@ -158,9 +158,9 @@ export default function Home() {
         <p>Rules are only marked supported after a tested Rust generator exists. This scanner currently generates no native code.</p>
       </div>
       <div className="notice"><span>ⓘ</span><div><b>Native translation is still in development</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
-      {report.detected.platform === "Fabric" && report.detected.class_files === 0 && report.detected.mixin_configs.length === 0 && Object.keys(report.detected.entrypoints).length === 0 && report.detected.mod_id && report.detected.version && <>
+      {report.detected.platform === "Fabric" && report.detected.class_files === 0 && report.detected.assets === 0 && report.detected.mixin_configs.length === 0 && Object.keys(report.detected.entrypoints).length === 0 && report.detected.mod_id && report.detected.version && <>
         <div className="report-card"><h3>EXPERIMENTAL METADATA-ONLY CONVERSION</h3>
-          <p>This JAR has no Java classes, entrypoints or declared Mixin configs. We can carry its display name, version and description into a native Horizon Mods-list entry. This does not port gameplay or assets, and the generated native code has not yet passed the pinned Horizon Mixins compile test.</p>
+          <p>This JAR has no Java classes, assets, entrypoints or declared Mixin configs. We can carry its display name, version and description into a native Horizon Mods-list entry. This does not port gameplay or assets, and the generated native code has not yet passed the pinned Horizon Mixins compile test.</p>
           <button className="analyze" disabled={converting} onClick={convertMetadataOnly}>{converting ? "GENERATING HNMOD…" : "GENERATE METADATA-ONLY HNMOD"} <span>→</span></button>
           {conversionError && <div className="error">{conversionError}</div>}
         </div>
