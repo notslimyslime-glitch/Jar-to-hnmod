@@ -22,7 +22,8 @@ jobs:
       - run: npm install
       - run: npm run lint
       - run: npm run test:translator
-      - run: npm run build
+      - name: Build Cloudflare Worker bundle
+        run: npm run build:worker
 
   native-bridge-fixture:
     runs-on: ubuntu-latest
