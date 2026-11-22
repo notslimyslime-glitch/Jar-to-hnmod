@@ -10,6 +10,7 @@ type Report = {
     mixin_classes: number; class_files: number; assets: number;
     bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
   };
+  horizon: { revision: string; hooks: { name: string; version: number; target: string }[] };
   flags: { level: string; code: string; message: string }[];
   conversion: { status: string; hnmod_generated: boolean; reason: string; next_step: string };
 };
@@ -88,6 +89,10 @@ export default function Home() {
         <p>Referenced Java types: {report.detected.bytecode_inspection?.referenced_types.slice(0, 12).join(", ") || "None extracted"}</p>
         <p>Skipped or unreadable classes: {report.detected.bytecode_inspection?.skipped_or_unreadable ?? 0}</p>
         {report.detected.bytecode_inspection?.class_samples.slice(0, 8).map(c => <p key={c.name}><b>{c.name}</b> · {c.methods.length} methods · {c.super_name || "no parent"}</p>)}
+      </div>
+      <div className="report-card"><h3>HORIZON NATIVE HOOK CATALOG</h3>
+        <p>These are real extension points from Horizon revision <b>{report.horizon.revision.slice(0, 10)}</b>. They are possible places for a native port to connect, not automatic matches for this Java mod.</p>
+        <div className="report-grid">{report.horizon.hooks.map(h => <p key={h.name}><b>{h.name}</b> · v{h.version}</p>)}</div>
       </div>
       <div className="notice"><span>ⓘ</span><div><b>Native translation is still in development</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
       {report.flags.map(f => <div className="flag" key={f.code}><b>{f.code}</b><span>{f.message}</span></div>)}
