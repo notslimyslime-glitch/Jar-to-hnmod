@@ -52,12 +52,12 @@ export function translatePureIntMethod(cls: ClassSummary, method: ClassSummary["
       const right = stack.pop()!;
       const left = stack.pop()!;
       const operation = instruction.mnemonic === "iadd" ? "wrapping_add" : instruction.mnemonic === "isub" ? "wrapping_sub" : "wrapping_mul";
-      stack.push(`(${left}.${operation}(${right}))`);
+      stack.push(`((${left}).${operation}(${right}))`);
       continue;
     }
     if (instruction.mnemonic === "ineg") {
       if (returned || stack.length < 1) return null;
-      stack.push(`${stack.pop()!}.wrapping_neg()`);
+      stack.push(`(${stack.pop()!}).wrapping_neg()`);
       continue;
     }
     if (instruction.mnemonic === "ireturn") {
