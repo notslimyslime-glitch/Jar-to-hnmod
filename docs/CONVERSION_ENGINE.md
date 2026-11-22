@@ -64,3 +64,16 @@ timing and purpose documented beside Horizon's actual hook definitions at the
 pinned revision. A future translation rule must satisfy all four dimensions.
 A Java method name or a Mixin target name alone is never sufficient evidence
 for selecting a native hook.
+
+
+## Translator coverage registry
+
+`lib/translation-rules.ts` is the single source of truth for detected Java patterns and their current translation status:
+
+- `supported`: reserved for a pattern with an implemented Rust generator and passing behavior-equivalence fixtures.
+- `needs_manual_review`: recognizable Java/Mixin evidence exists, but semantic equivalence and Horizon hook compatibility are not established.
+- `unsupported`: the platform integration has no translator.
+
+The current registry intentionally contains no `supported` rules. The analyzer reports matched evidence and explains why each pattern is blocked. This is deliberate: a detected annotation is not a converted behavior, and generating placeholder Rust would create a misleading HNMOD.
+
+The next implementation milestone is a tiny end-to-end fixture: a known Java pattern, a reviewed mapping to one pinned Horizon hook, generated Rust, and a compile/test check. Only after that fixture passes should its registry entry become `supported`.
