@@ -34,6 +34,10 @@ await assert.rejects(
   /Unsupported Horizon resource path/
 );
 await assert.rejects(
+  packageAssetHmod({ id: "demo", name: "Demo", version: "1", files: [{ path: "assets\\demo\\icon.png", bytes: new Uint8Array([1]) }] }),
+  /Unsupported Horizon resource path/
+);
+await assert.rejects(
   packageAssetHmod({ id: "demo", name: "Demo", version: "1", files: [{ path: "assets/demo/empty", bytes: new Uint8Array() }] }),
   /Empty asset/
 );
