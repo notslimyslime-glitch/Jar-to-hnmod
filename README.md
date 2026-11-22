@@ -19,6 +19,12 @@ A Next.js service for inspecting Minecraft Java mod JARs and preparing native Ho
 - A deliberately narrow Java-to-Rust micro-translator for pure static integer methods
 - A reviewed AppleSkin native Rust implementation, packaged as a Horizon `.hnmod` candidate
 
+## Current Horizon .hmod asset conversion
+
+The site now has a separate content-only conversion path for Fabric/Quilt JARs that contain passive `assets/` files and no Java classes, mixins, entrypoints or `data/` files. It writes a Horizon `.hmod` ZIP with a `horizon-mod.toml` manifest and the original asset paths.
+
+This is deliberately not a Java gameplay converter. It does not translate code, Mixin behavior, data-driven gameplay or dependencies. It rejects those archives rather than silently dropping their behavior. The package format follows the current Horizon content-mod layout; it is separate from the legacy Starling 0.9.0 `.hnmod` AppleSkin candidate below.
+
 ## Starling 0.9.0 target
 
 Starling 0.9.0 still imports Horizon native mods as `.hnmod` bundles, but it uses a newer Horizon native-mod API. Bundles must target matching Horizon and Horizon Mixins revisions. Starling documents compatibility adaptation for supported older hook names.
