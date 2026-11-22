@@ -5,6 +5,7 @@ import { inspectClass } from "@/lib/classfile";
 import { HORIZON_HOOKS, HORIZON_REVISION } from "@/lib/horizon-hooks";
 import { assessTranslationReadiness } from "@/lib/translation-rules";
 import { translatePureIntMethods } from "@/lib/pure-int-translator";
+import { detectModPlatform } from "@/lib/mod-platform";
 
 export const runtime = "nodejs";
 const MAX_FILE = 25 * 1024 * 1024;
@@ -125,7 +126,9 @@ export async function POST(request: Request) {
     })).filter(family => family.references > 0);
     const assets = names.filter(n => /^(assets|data)\//.test(n));
     const depNames = Object.keys(depends);
-    const platform = depNames.some(x => /forge|neoforge/i.test(x)) ? "Forge/NeoForge" : fabric ? "Fabric" : "Unknown";
+    const manifestEntry = zip.file("META-INF/MANIFEST.MF");
+    const manifestText = manifestEntry ? await manifestEntry.async("string").catch(() => "") : "";
+    const platform = detectModPlatform({ names, manifest: manifestText });
     const translationReadiness = assessTranslationReadiness({ platform, entrypoints, mixinAnnotations });
     const pureIntTranslations = translatePureIntMethods(classInsights);
     const flags: {level:string;code:string;message:string}[] = [];
