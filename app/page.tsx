@@ -8,6 +8,7 @@ type Report = {
     platform: string; mod_id: string | null; version: string | null; minecraft: string | null;
     dependencies: string[]; entrypoints: Record<string, string[]>; mixin_configs: string[];
     mixin_classes: number; mixin_config_details: { file: string; package: string | null; required: boolean | null; compatibility_level: string | null; refmap: string | null; plugin: string | null; common: string[]; client: string[]; server: string[]; error?: string }[]; class_files: number; assets: number;
+    bytecode_translation: { supported_methods: number; methods: { class_name: string; java_method: string; java_descriptor: string; rust_name: string; rust_source: string; instruction_count: number; status: string }[] };
     bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; member_references_seen: number; bytecode_instructions_seen: number; invocation_sites_seen: number; field_access_sites_seen: number; common_instructions: { mnemonic: string; count: number }[]; invocation_samples: { class_name: string; method_name: string; method_descriptor: string; offset: number; opcode: number; mnemonic: string; member?: { owner: string; name: string; descriptor: string; kind: string } }[]; field_access_samples: { class_name: string; method_name: string; method_descriptor: string; offset: number; opcode: number; mnemonic: string; member?: { owner: string; name: string; descriptor: string; kind: string } }[]; api_surface: { name: string; references: number; examples: string[] }[]; mixin_annotations: { class_name: string; method_name: string | null; method_descriptor: string | null; annotation: string; values: Record<string, unknown> }[]; behavior_evidence: { class_name: string; method_name: string; method_descriptor: string; evidence_status: string; mixin_annotations: { type: string; values: Record<string, unknown> }[]; calls: { owner: string; name: string; descriptor: string; instruction: string; offset: number }[]; fields: { owner: string; name: string; descriptor: string; instruction: string; offset: number }[] }[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
   };
   horizon: { revision: string; hooks: { name: string; version: number; api_since: number; signature: string; timing: string; purpose: string; target: string }[] };
@@ -118,6 +119,14 @@ export default function Home() {
         <p>Referenced Java types: {report.detected.bytecode_inspection?.referenced_types.slice(0, 12).join(", ") || "None extracted"}</p>
         <p>Skipped or unreadable classes: {report.detected.bytecode_inspection?.skipped_or_unreadable ?? 0}</p>
         {report.detected.bytecode_inspection?.class_samples.slice(0, 8).map(c => <p key={c.name}><b>{c.name}</b> · {c.methods.length} methods · {c.super_name || "no parent"}</p>)}
+      </div>
+      <div className="report-card"><h3>JAVA → RUST MICRO-TRANSLATOR</h3>
+        <p><b>{report.detected.bytecode_translation?.supported_methods ?? 0}</b> methods matched the first verified bytecode subset: static integer methods with straight-line loads, constants, add/subtract/multiply/negate and integer return. Unsupported instructions are rejected, not guessed.</p>
+        {report.detected.bytecode_translation?.methods?.slice(0, 20).map((method, index) => <div key={method.class_name + method.java_method + method.java_descriptor + index}>
+          <p><b>{method.class_name} :: {method.java_method}{method.java_descriptor}</b> · {method.instruction_count} JVM instructions</p>
+          <pre className="code-preview">{method.rust_source}</pre>
+        </div>)}
+        <p>This proves a small Java bytecode subset can be translated into Rust. It does not yet attach those helper functions to Minecraft gameplay or produce a gameplay-ready HNMOD.</p>
       </div>
       <div className="report-card"><h3>BYTECODE OPERATIONS</h3>
         <p>{report.detected.bytecode_inspection?.bytecode_instructions_seen ?? 0} JVM instructions decoded from method bodies. Found {report.detected.bytecode_inspection?.invocation_sites_seen ?? 0} invocation sites and {report.detected.bytecode_inspection?.field_access_sites_seen ?? 0} field access sites.</p>
