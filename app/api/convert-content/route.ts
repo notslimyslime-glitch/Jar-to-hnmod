@@ -48,10 +48,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Mod metadata is invalid JSON." }, { status: 400 });
     }
 
-    const id = typeof metadata.id === "string" ? metadata.id : "";
-    const version = typeof metadata.version === "string" ? metadata.version : "";
-    const name = typeof metadata.name === "string" ? metadata.name : id;
-    const description = typeof metadata.description === "string" ? metadata.description : "";
+    const quiltLoader = metadata.quilt_loader && typeof metadata.quilt_loader === "object"
+      ? metadata.quilt_loader as Record<string, unknown>
+      : null;
+    const quiltMetadata = quiltLoader?.metadata && typeof quiltLoader.metadata === "object"
+      ? quiltLoader.metadata as Record<string, unknown>
+      : null;
+    const id = typeof metadata.id === "string" ? metadata.id : typeof quiltLoader?.id === "string" ? quiltLoader.id : "";
+    const version = typeof metadata.version === "string" ? metadata.version : typeof quiltLoader?.version === "string" ? quiltLoader.version : "";
+    const name = typeof metadata.name === "string" ? metadata.name : typeof quiltMetadata?.name === "string" ? quiltMetadata.name : id;
+    const description = typeof metadata.description === "string" ? metadata.description : typeof quiltMetadata?.description === "string" ? quiltMetadata.description : "";
     if (!SAFE_ID.test(id) || !SAFE_VERSION.test(version) || !name.trim()) {
       return NextResponse.json({ error: "The mod metadata needs a valid id, version and name before it can be packaged." }, { status: 422 });
     }
@@ -76,7 +82,7 @@ export async function POST(request: Request) {
     for (const entry of assetEntries) {
       const path = entry.name.replace(/\\/g, "/");
       const parts = path.split("/");
-      if (parts.length < 3 || parts.some(part => !part || part === "." || part === ".." || part.includes(":"))) {
+      if (parts.length < 3 || parts.some(part => !/^[a-z0-9_.-]+$/.test(part))) {
         return NextResponse.json({ error: `Unsafe resource path: ${path}` }, { status: 400 });
       }
       files.push({ path, bytes: await entry.async("uint8array") });
