@@ -52,6 +52,8 @@ Cloudflare remains the website and job API. A separate runner performs the nativ
 
 ## Starling 0.9.0 compatibility gate
 
+The Starling v0.9.0 source pins its native build to Horizon Mixins revision `5a64af938ec86b00d53d16a408aabc0038fb3e57`. The website's bundle metadata and CI fixture are pinned to this exact revision. Starling's own build script also adapts older native-hook bundles before compiling them, so the legacy hook names in a bundle are not automatically evidence of incompatibility.
+
 Horizon Porter documents `port --api` as experimental and currently tied to the `arismoko/horizon` fork. Its older horizon-mixins bundle backend and its newer typed-API backend are not interchangeable. Do not assume either output works in Starling 0.9.0 based on a successful ZIP build.
 
 Before enabling downloads for generated native mods:
