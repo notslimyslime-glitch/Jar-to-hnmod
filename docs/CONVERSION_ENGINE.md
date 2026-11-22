@@ -89,3 +89,11 @@ The engine now has a deterministic source-bundle packager in `lib/hnmod-packager
 Before writing an archive, the packager checks the lowercase mod id, version, exact pinned revisions, manifest identity/revision, safe source filenames, non-empty source contents, size limits, and that every `source`/`helper` named by the manifest exists. It caps total source content at 5 MB, then re-opens the finished ZIP with CRC checking and verifies every expected path and file byte before returning it. It uses fixed ZIP timestamps and sorted entries for repeatable output.
 
 **Important:** packaging is not translation. The packager refuses an empty source bundle and does not invent Rust code. It is the final packaging stage that a future verified translator can call. The current Java/Mixin rules remain unverified, so this addition does not make arbitrary JARs convertible yet.
+
+## First bounded translator: Fabric metadata bridge
+
+`lib/fabric-metadata-translator.ts` implements a deliberately narrow first conversion: a Fabric JAR with no `.class` files, no declared Mixin configs and no entrypoints can become a native Mods-list registration. It carries only the Fabric id, version, display name and description into a small Rust helper injected at Horizon's pinned `native_mods` hook.
+
+The `/api/convert` endpoint re-reads the uploaded archive with CRC checking, enforces the existing archive size/path limits, rejects executable Java/Mixin behavior, and packages the generated source through the validated HNMOD packager. The results page offers this path only when the scan indicates the JAR fits the narrow metadata-only boundary.
+
+This is **not a gameplay port**. It does not carry over assets, dependencies, settings or Java behavior. The output is marked experimental and must not be called a supported conversion until the generated helper and injection pass the pinned Horizon Mixins plan/apply and Rust compile tests.
