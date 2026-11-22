@@ -8,6 +8,7 @@ type Report = {
     platform: string; mod_id: string | null; version: string | null; minecraft: string | null;
     dependencies: string[]; entrypoints: Record<string, string[]>; mixin_configs: string[];
     mixin_classes: number; class_files: number; assets: number;
+    bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
   };
   flags: { level: string; code: string; message: string }[];
   conversion: { status: string; hnmod_generated: boolean; reason: string; next_step: string };
@@ -78,10 +79,17 @@ export default function Home() {
         <div><strong>{report.detected.mixin_configs.length}</strong><span>MIXIN CONFIGS</span></div>
         <div><strong>{report.detected.mixin_classes}</strong><span>MIXIN CLASSES</span></div>
         <div><strong>{report.detected.assets}</strong><span>ASSETS</span></div>
+        <div><strong>{report.detected.bytecode_inspection?.inspected_classes ?? 0}</strong><span>BYTECODE CLASSES READ</span></div>
+        <div><strong>{report.detected.bytecode_inspection?.methods_seen ?? 0}</strong><span>METHODS FOUND</span></div>
       </div>
       <div className="report-grid"><div className="report-card"><h3>DETECTED DEPENDENCIES</h3>{report.detected.dependencies.length ? report.detected.dependencies.map(x => <span className="tag" key={x}>{x}</span>) : <p>None detected</p>}</div>
       <div className="report-card"><h3>ENTRYPOINTS</h3>{Object.entries(report.detected.entrypoints).map(([k,v]) => <p key={k}><b>{k}</b> · {v.join(", ")}</p>)}{!Object.keys(report.detected.entrypoints).length && <p>None detected</p>}</div></div>
-      <div className="notice"><span>ⓘ</span><div><b>Conversion is not generated yet</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
+      <div className="report-card"><h3>BYTECODE DISCOVERY</h3>
+        <p>Referenced Java types: {report.detected.bytecode_inspection?.referenced_types.slice(0, 12).join(", ") || "None extracted"}</p>
+        <p>Skipped or unreadable classes: {report.detected.bytecode_inspection?.skipped_or_unreadable ?? 0}</p>
+        {report.detected.bytecode_inspection?.class_samples.slice(0, 8).map(c => <p key={c.name}><b>{c.name}</b> · {c.methods.length} methods · {c.super_name || "no parent"}</p>)}
+      </div>
+      <div className="notice"><span>ⓘ</span><div><b>Native translation is still in development</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
       {report.flags.map(f => <div className="flag" key={f.code}><b>{f.code}</b><span>{f.message}</span></div>)}
     </section>}
     <footer><span>HORIZON TOOL LAB</span><span>BUILT FOR NATIVE MODDING <b>✳</b></span></footer>
