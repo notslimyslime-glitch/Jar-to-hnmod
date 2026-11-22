@@ -67,8 +67,8 @@ export async function POST(request: Request) {
       const bundle = await packageNativeBundle({
         id: "appleskin",
         version: "0.1.3",
-        horizonRevision: "02c8607ee8ebd216f2f535c1eb7b62b572830df2",
-        mixinsRevision: "cb1ad23022392d88f006cf94cbf6552a73f5df12",
+        horizonRevision: HORIZON_REVISION,
+        mixinsRevision: HORIZON_MIXINS_REVISION,
         mixinManifest,
         sources,
         knownPort: "appleskin"
