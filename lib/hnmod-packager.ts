@@ -43,6 +43,7 @@ export function validateNamedHookReferences(manifest: string): void {
     const versionText = /^\s*hook_version\s*=\s*(\d+)\s*$/m.exec(block)?.[1];
     const hasTarget = /^\s*target\s*=/m.test(block);
     if (hook && hasTarget) throw new Error("An injection cannot define both a named hook and a raw target.");
+    if (!hook && !hasTarget) throw new Error("Each injection must define either a named hook or a raw target.");
     if (!hook && versionText) throw new Error("hook_version requires a named hook.");
     if (hook && !versionText) throw new Error(`Named hook "${hook}" requires hook_version.`);
     if (hook) {
