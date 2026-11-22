@@ -11,6 +11,7 @@ type Report = {
     bytecode_inspection: { inspected_classes: number; skipped_or_unreadable: number; methods_seen: number; referenced_types: string[]; member_references_seen: number; bytecode_instructions_seen: number; invocation_sites_seen: number; field_access_sites_seen: number; common_instructions: { mnemonic: string; count: number }[]; invocation_samples: { class_name: string; method_name: string; method_descriptor: string; offset: number; opcode: number; mnemonic: string; member?: { owner: string; name: string; descriptor: string; kind: string } }[]; field_access_samples: { class_name: string; method_name: string; method_descriptor: string; offset: number; opcode: number; mnemonic: string; member?: { owner: string; name: string; descriptor: string; kind: string } }[]; api_surface: { name: string; references: number; examples: string[] }[]; mixin_annotations: { class_name: string; method_name: string | null; method_descriptor: string | null; annotation: string; values: Record<string, unknown> }[]; behavior_evidence: { class_name: string; method_name: string; method_descriptor: string; evidence_status: string; mixin_annotations: { type: string; values: Record<string, unknown> }[]; calls: { owner: string; name: string; descriptor: string; instruction: string; offset: number }[]; fields: { owner: string; name: string; descriptor: string; instruction: string; offset: number }[] }[]; class_samples: { name: string; super_name: string | null; java_version: number; methods: { name: string; descriptor: string }[]; strings: string[] }[] };
   };
   horizon: { revision: string; hooks: { name: string; version: number; signature: string; timing: string; purpose: string; target: string }[] };
+  translation_readiness: { supported_rules: number; manual_review_rules: number; unsupported_rules: number; matched_rules: { id: string; label: string; status: string; evidence: string; reason: string }[]; status: string; explanation: string };
   flags: { level: string; code: string; message: string }[];
   conversion: { status: string; hnmod_generated: boolean; reason: string; next_step: string };
 };
@@ -132,6 +133,12 @@ export default function Home() {
       <div className="report-card"><h3>HORIZON NATIVE HOOK CATALOG</h3>
         <p>Verified extension contracts from Horizon revision <b>{report.horizon.revision.slice(0, 10)}</b>. A translator must match event timing and parameter meaning, not just a similar name.</p>
         <div className="report-grid">{report.horizon.hooks.map(h => <div key={h.name}><p><b>{h.name}</b> · API v{h.version}</p><p>{h.purpose}</p><p><code>{h.signature}</code></p><p>{h.timing}</p></div>)}</div>
+      </div>
+      <div className="report-card"><h3>TRANSLATOR COVERAGE</h3>
+        <p>{report.translation_readiness.explanation}</p>
+        <p><b>{report.translation_readiness.supported_rules}</b> verified · <b>{report.translation_readiness.manual_review_rules}</b> need manual review · <b>{report.translation_readiness.unsupported_rules}</b> unsupported</p>
+        {report.translation_readiness.matched_rules.length ? report.translation_readiness.matched_rules.map(rule => <div key={rule.id}><p><b>{rule.label}</b> · {rule.status.replaceAll("_", " ")}</p><p>{rule.reason}</p><p>Evidence: <code>{rule.evidence}</code></p></div>) : <p>No known translator patterns matched this archive. This does not mean the mod is simple or convertible.</p>}
+        <p>Rules are only marked supported after a tested Rust generator exists. This scanner currently generates no native code.</p>
       </div>
       <div className="notice"><span>ⓘ</span><div><b>Native translation is still in development</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
       {report.flags.map(f => <div className="flag" key={f.code}><b>{f.code}</b><span>{f.message}</span></div>)}
