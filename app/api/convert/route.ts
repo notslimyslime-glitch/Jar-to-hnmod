@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     if (entries.length > MAX_ENTRIES) return NextResponse.json({ error: "Archive contains too many files." }, { status: 400 });
     let expanded = 0;
     for (const entry of entries) {
-      const normalized = entry.name.replace(/\\\\/g, "/");
+      const normalized = entry.name.replace(/\\/g, "/");
       if (normalized.startsWith("/") || normalized.split("/").includes("..")) {
         return NextResponse.json({ error: "Archive contains an unsafe path." }, { status: 400 });
       }
