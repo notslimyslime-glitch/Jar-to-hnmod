@@ -19,6 +19,7 @@ assert.equal(result.assetCount, 2);
 const zip = await JSZip.loadAsync(result.bytes, { checkCRC32: true });
 assert.ok(zip.file("horizon-mod.toml"));
 assert.match(await zip.file("horizon-mod.toml").async("string"), /api = "0.2"/);
+assert.match(await zip.file("horizon-mod.toml").async("string"), /capabilities = \\[\\"registries\\"\\]/);
 for (const file of files) {
   const actual = await zip.file(file.path).async("uint8array");
   assert.deepEqual([...actual], [...file.bytes]);
