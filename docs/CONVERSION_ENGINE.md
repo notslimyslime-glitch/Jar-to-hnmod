@@ -122,3 +122,8 @@ CI checks the fixture twice with the pinned Horizon Mixins 0.6.0 CLI: first it b
 It rejects instance methods, branches, calls, field access, unsupported opcodes, oversized instruction sequences, invalid stack use, and methods whose return is not the final instruction. It does not attempt control-flow reconstruction or infer gameplay semantics. The analyzer displays generated Rust for methods in this exact subset.
 
 CI runs a TypeScript-level translator test with positive and negative cases, plus Rust tests for the emitted arithmetic's overflow behavior. This is a genuine but intentionally tiny bytecode translator. Its output is currently a standalone Rust helper preview, not yet wired to a Minecraft event or packaged as a gameplay mod.
+
+
+### Expanded integer bytecode operands
+
+The class-file reader preserves operands for JVM `iload`, `bipush`, and `sipush` instructions. The pure-integer translator can therefore translate indexed local-variable loads and signed byte/short constants in addition to the compact `iload_0`–`iload_3` and `iconst_*` forms. This remains a straight-line static integer subset: it does not interpret branches, calls, fields, object state, or Minecraft APIs. Unknown instructions continue to fail closed.
