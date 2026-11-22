@@ -97,7 +97,7 @@ export default function Home() {
         <button className="analyze" disabled={!file || busy} onClick={analyze}>{busy ? "SCANNING ARCHIVE…" : "ANALYZE MOD"} <span>→</span></button>
         {conversionError && <div className="error">{conversionError}</div>}
         {conversionNotice && <div className="notice"><span>ⓘ</span><div><b>Download ready</b><p>{conversionNotice}</p></div></div>}
-        <p className="fineprint">Analysis checks metadata, dependencies, mixin declarations and archive contents. It does not run the uploaded mod.</p>
+        <p className="fineprint">Analysis checks metadata, dependencies, mixins and class-file structure. AI conversion sends extracted class summaries and metadata to Google Gemini; its free-tier terms may allow submitted content to improve Google products. Do not upload private or proprietary mods. Uploaded Java code is never executed.</p>
       </div>
     </section>
     {report && <section className="results">
@@ -175,10 +175,9 @@ export default function Home() {
         <p>Rules are only marked supported after a tested Rust generator exists. This scanner currently generates no native code.</p>
       </div>
       <div className="notice"><span>ⓘ</span><div><b>Native translation is still in development</b><p>{report.conversion.reason} {report.conversion.next_step}</p></div></div>
-      {report.detected.platform === "Fabric" && report.detected.mod_id && report.detected.version && (() => {
-        const metadataOnly = report.detected.class_files === 0 && report.detected.assets === 0 && report.detected.mixin_configs.length === 0 && Object.keys(report.detected.entrypoints).length === 0;
+      {(() => {
         const appleSkinSupported = report.detected.mod_id === "appleskin" && report.detected.version === "3.0.10+mc26.3";
-        return <div className="report-card"><h3>{appleSkinSupported ? "SUPPORTED NATIVE PORT" : metadataOnly ? "EXPERIMENTAL METADATA-ONLY CONVERSION" : "NATIVE CONVERSION STATUS"}</h3>
+        return <div className="report-card"><h3>{appleSkinSupported ? "SUPPORTED NATIVE PORT" : "GEMINI-ASSISTED EXPERIMENTAL CONVERSION"}</h3>
           {appleSkinSupported ? <>
             <p><b>AppleSkin Fabric 3.0.10+mc26.3 has a reviewed native Horizon implementation.</b> The service packages that implementation into a real .hnmod bundle. This is a version-specific known port, not arbitrary Java bytecode translation.</p>
             <button className="analyze" disabled={converting} onClick={convertJar}>{converting ? "BUILDING HNMOD…" : "DOWNLOAD APPLESKIN .HNMOD"} <span>↓</span></button>
