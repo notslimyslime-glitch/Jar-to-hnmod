@@ -92,12 +92,29 @@ export async function packageNativeBundle(input: NativeBundleInput): Promise<Nat
   for (const name of Object.keys(files).sort()) {
     zip.file(name, files[name], { date: FIXED_DATE, unixPermissions: 0o100644, createFolders: false });
   }
+  const totalSourceBytes = Object.values(files).reduce((sum, source) => sum + Buffer.byteLength(source, "utf8"), 0);
+  assert(totalSourceBytes <= 5 * 1024 * 1024, "Generated native bundle exceeds the 5 MB source limit.");
+
   const bytes = await zip.generateAsync({
     type: "nodebuffer",
     compression: "DEFLATE",
     compressionOptions: { level: 9 },
     platform: "UNIX"
   });
+
+  // Re-open the archive before returning it. A successful ZIP write alone does
+  // not prove the bundle has the exact paths and bytes the Horizon loader expects.
+  const verified = await JSZip.loadAsync(bytes, { checkCRC32: true });
+  const actualEntries = Object.values(verified.files).filter(entry => !entry.dir).map(entry => entry.name).sort();
+  const expectedEntries = Object.keys(files).sort();
+  assert(JSON.stringify(actualEntries) === JSON.stringify(expectedEntries), "Generated archive entry list failed verification.");
+  for (const name of expectedEntries) {
+    const entry = verified.file(name);
+    assert(entry, `Generated archive is missing ${name}.`);
+    const actual = await entry.async("string");
+    assert(actual === files[name], `Generated archive content mismatch for ${name}.`);
+  }
+
   const { createHash } = await import("node:crypto");
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   return {
