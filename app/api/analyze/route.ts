@@ -122,7 +122,7 @@ export async function POST(request: Request) {
       references: memberReferences.filter(member => family.match(member.owner)).length,
       examples: [...new Set(memberReferences.filter(member => family.match(member.owner)).map(member => member.owner + "." + member.name))].slice(0, 12)
     })).filter(family => family.references > 0);
-    const assets = names.filter(n => n.startsWith("assets/"));
+    const assets = names.filter(n => /^(assets|data)\//.test(n));
     const depNames = Object.keys(depends);
     const platform = depNames.some(x => /forge|neoforge/i.test(x)) ? "Forge/NeoForge" : fabric ? "Fabric" : "Unknown";
     const translationReadiness = assessTranslationReadiness({ platform, entrypoints, mixinAnnotations });
