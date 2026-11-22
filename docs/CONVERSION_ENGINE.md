@@ -45,3 +45,13 @@ standard library, Kotlin, and other library namespaces. These are static
 references only: they are not a control-flow trace and do not prove that a
 referenced member is called at runtime. This helps prioritize translator work
 without pretending to understand arbitrary Java behavior.
+
+
+## Method-level behavior evidence
+
+The analyzer groups Mixin annotations and observed Minecraft/Fabric call and
+field instructions by their containing Java method. This gives translator work
+a concrete evidence bundle instead of unrelated lists. Each group is explicitly
+labelled `evidence_only`: it does not establish control flow, runtime execution,
+semantic equivalence, or a Horizon hook match. No Rust is generated from these
+groups until a versioned translator has a verified fixture and validation.
