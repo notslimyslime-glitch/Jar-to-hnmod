@@ -36,12 +36,12 @@ function assert(condition: unknown, message: string): asserts condition {
  * Horizon Mixins plan/apply or Rust compilation.
  */
 export function validateNamedHookReferences(manifest: string): void {
-  const blocks = manifest.split(/^\\[\\[injection\\]\\]\\s*$/m).slice(1)
-    .map(section => section.split(/^\\[/m, 1)[0]);
+  const blocks = manifest.split(/^\[\[injection\]\]\s*$/m).slice(1)
+    .map(section => section.split(/^\[/m, 1)[0]);
   for (const block of blocks) {
-    const hook = /^\\s*hook\\s*=\\s*"([^"]+)"\\s*$/m.exec(block)?.[1];
-    const versionText = /^\\s*hook_version\\s*=\\s*(\\d+)\\s*$/m.exec(block)?.[1];
-    const hasTarget = /^\\s*target\\s*=/m.test(block);
+    const hook = /^\s*hook\s*=\s*"([^"]+)"\s*$/m.exec(block)?.[1];
+    const versionText = /^\s*hook_version\s*=\s*(\d+)\s*$/m.exec(block)?.[1];
+    const hasTarget = /^\s*target\s*=/m.test(block);
     if (hook && hasTarget) throw new Error("An injection cannot define both a named hook and a raw target.");
     if (!hook && versionText) throw new Error("hook_version requires a named hook.");
     if (hook && !versionText) throw new Error(`Named hook "${hook}" requires hook_version.`);
