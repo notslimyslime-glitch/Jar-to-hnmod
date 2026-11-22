@@ -31,19 +31,22 @@ Starling 0.9.0 still imports Horizon native mods as `.hnmod` bundles, but it use
 
 The AppleSkin bundle is now pinned to the Starling 0.9.0 Horizon revision and uses the current Horizon Mixins revision. This is a compatibility retarget, not proof of a successful native build. It must still pass the full native build and an in-game Starling 0.9.0 test before it can be called working.
 
-## Horizon Porter integration
+## Horizon Porter conversion engine
 
-We have identified [Horizon Porter](https://github.com/kevinbonomi2-bit/horizon-porter) as the stronger upstream conversion engine. Its Rust crates cover Java mod analysis, content conversion, Mixin mapping, native bundle generation and optional AI-assisted method translation. Integration requirements and compatibility gates are documented in [docs/HORIZON-PORTER-INTEGRATION.md](docs/HORIZON-PORTER-INTEGRATION.md).
+The repository now includes a separate Docker job runner in `porter-runner/`. It builds the pinned [Horizon Porter](https://github.com/kevinbonomi2-bit/horizon-porter) CLI, decompiles JARs with Vineflower, generates a Horizon port, and packages the actual `.hnmod` and/or `.hmod` files. The website's one-click `/api/convert-auto` route calls this runner when its URL and token are configured.
 
-This is an integration plan, not a claim that the Porter is already running on this website. The current Cloudflare Worker cannot execute its native Rust/Java/Cargo pipeline. A separate Rust job runner and a verified Starling 0.9.0 API target are required before generated downloads can be enabled.
+**Important:** Porter’s deterministic pass can generate native scaffolding and a porting checklist, but it does not automatically translate every Java method. The runner deliberately does not call a paid AI model. Its ZIP includes `PORTING.md` and a status note explaining that generated native logic may still contain TODO stubs. Treat the result as a candidate, not a guaranteed working mod.
 
-## Deterministic conversion policy
+### Connect the runner
 
-There is no AI service, external model call, API key, or paid conversion dependency.
+1. Open the repository's `render.yaml` as a Render Blueprint and deploy the `jar-to-hnmod-porter` service.
+2. Copy the generated `RUNNER_API_TOKEN` from that service's environment settings.
+3. In the website's Cloudflare Worker environment, set `HORIZON_PORTER_RUNNER_URL` to the Render service URL (without a trailing slash).
+4. Set `HORIZON_PORTER_RUNNER_TOKEN` to the same token, then redeploy the Worker.
 
-The service only emits a bundle when it has a real native Rust implementation for that exact mod build. Other JARs receive a clear explanation that no verified port exists yet. The service does not rename a JAR, create empty Rust stubs, or label metadata inspection as gameplay conversion.
+The Render free service can sleep, has limited memory and may struggle with large mods. The runner accepts JARs up to 25 MB and uses temporary storage per conversion. Do not expose the runner without its token.
 
-A general Java-to-Rust translator still needs real mappings for Minecraft APIs, Fabric/Forge entrypoints, Mixin injection behavior, resources, dependencies and game lifecycle. Arbitrary Java mods cannot be guaranteed to convert automatically when Horizon does not expose equivalent behavior.
+See [porter-runner/README.md](porter-runner/README.md) and [the integration notes](docs/HORIZON-PORTER-INTEGRATION.md) for details.
 
 ## Cloudflare Workers
 
