@@ -5,8 +5,9 @@ A Next.js web app for inspecting Minecraft Java mod JARs and preparing native Ho
 ## Run locally
 1. Install Node.js 20+
 2. Run `npm install`
-3. Run `npm run dev`
-4. Open http://localhost:3000
+3. Copy `.env.example` to `.env.local` and fill in the AI Gateway settings (optional for archive analysis)
+4. Run `npm run dev`
+5. Open http://localhost:3000
 
 ## Current functionality
 - Drag-and-drop JAR upload
@@ -14,9 +15,18 @@ A Next.js web app for inspecting Minecraft Java mod JARs and preparing native Ho
 - ZIP path traversal checks
 - Fabric metadata, dependency, entrypoint and mixin discovery
 - Downloadable JSON analysis report
+- Optional AI migration plan based on the scan metadata
 
-## Important limitation
-This first version analyzes JARs only. It does not translate arbitrary Java bytecode or mixin behavior into correct Rust native hooks, and it does not generate an HNMOD yet. Uploaded Java code is never executed. Native mods can have game-level privileges, so future generated source must be reviewed and tested.
+## Configure the AI planner
+Create an AI Gateway API key in your Vercel account, then set these environment variables in Vercel Project Settings → Environment Variables (or in local `.env.local`):
+
+- `AI_GATEWAY_API_KEY`: your private AI Gateway key
+- `AI_GATEWAY_MODEL`: a currently supported model ID in `provider/model` format
+
+The key is used only by the server-side `/api/ai-plan` route. Never put it in a `NEXT_PUBLIC_*` variable or browser code. AI requests go through Vercel AI Gateway's OpenAI-compatible Chat Completions endpoint.
+
+## Important limitations
+The app still does **not** translate arbitrary Java bytecode or mixin behavior into correct Rust native hooks, and it does **not** generate an HNMOD. The AI planner receives archive metadata only, not the Java source or bytecode, so it can propose an inspection and migration plan but cannot verify behavior or produce a working native port. Uploaded Java code is never executed. Native mods can have game-level privileges, so generated source must be reviewed and tested before use.
 
 ## Deployment
-Import this repository into Vercel and deploy using the default Next.js settings. No environment variables are required for the analyzer-only version.
+Import this repository into Vercel and deploy using the default Next.js settings. Add the two AI Gateway environment variables to enable the AI planner. Archive analysis works without them.
