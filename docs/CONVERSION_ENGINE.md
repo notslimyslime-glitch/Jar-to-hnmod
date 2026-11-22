@@ -59,11 +59,14 @@ groups until a versioned translator has a verified fixture and validation.
 
 ## Typed native hook contracts
 
-The hook catalog now records the signatures, API introduction versions, event
-timing and purpose documented beside Horizon's actual hook definitions at the
-pinned revision. A future translation rule must satisfy all four dimensions.
-A Java method name or a Mixin target name alone is never sufficient evidence
-for selecting a native hook.
+The hook catalog separates each named hook's `native-hooks.json` contract
+version from the overall Horizon native-hooks API version in which the hook
+was introduced. For example, `world_lifecycle` has hook contract v1 and was
+introduced in Horizon API v3; `panel_event` has hook contract v1 and was
+introduced in Horizon API v2. A future translation rule must match the hook
+contract version, signature, event timing and parameter meaning. A Java method
+name or Mixin target name alone is never sufficient evidence for selecting a
+native hook.
 
 
 ## Translator coverage registry
