@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       { name: "Mixin", match: (owner: string) => owner.startsWith("org.spongepowered.asm.mixin.") },
       { name: "Java standard library", match: (owner: string) => owner.startsWith("java.") || owner.startsWith("javax.") },
       { name: "Kotlin", match: (owner: string) => owner.startsWith("kotlin.") },
-      { name: "Other libraries", match: (_owner: string) => true }
+      { name: "Other libraries", match: (owner: string) => !owner.startsWith("net.minecraft.") && !owner.startsWith("net.fabricmc.") && !owner.startsWith("org.spongepowered.asm.mixin.") && !owner.startsWith("java.") && !owner.startsWith("javax.") && !owner.startsWith("kotlin.") }
     ];
     const apiSurface = apiFamilies.map(family => ({
       name: family.name,
