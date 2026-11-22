@@ -86,6 +86,6 @@ The engine now has a deterministic source-bundle packager in `lib/hnmod-packager
 - One `mixins/<mod-id>/horizon-mixin.toml` manifest.
 - Only explicitly supplied `.rs` and `.toml` source files under that bundle directory.
 
-Before writing an archive, the packager checks the lowercase mod id, version, exact pinned revisions, manifest identity/revision, safe source filenames, non-empty source contents, size limits, and that every `source`/`helper` named by the manifest exists. It uses fixed ZIP timestamps and sorted entries for repeatable output.
+Before writing an archive, the packager checks the lowercase mod id, version, exact pinned revisions, manifest identity/revision, safe source filenames, non-empty source contents, size limits, and that every `source`/`helper` named by the manifest exists. It caps total source content at 5 MB, then re-opens the finished ZIP with CRC checking and verifies every expected path and file byte before returning it. It uses fixed ZIP timestamps and sorted entries for repeatable output.
 
 **Important:** packaging is not translation. The packager refuses an empty source bundle and does not invent Rust code. It is the final packaging stage that a future verified translator can call. The current Java/Mixin rules remain unverified, so this addition does not make arbitrary JARs convertible yet.
