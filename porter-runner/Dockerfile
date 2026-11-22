@@ -3,7 +3,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git pkg-config 
 ARG PORTER_COMMIT=940364806bd41d9c4b4f076a08668485a85b9395
 RUN git clone https://github.com/kevinbonomi2-bit/horizon-porter.git /src \
     && git -C /src checkout "$PORTER_COMMIT" \
-    && cargo build --release --manifest-path /src/Cargo.toml -p porter-cli
+    && cargo build --locked --release --manifest-path /src/Cargo.toml -p porter-cli
 
 FROM python:3.12-slim AS runtime
 COPY --from=eclipse-temurin:21-jre /opt/java/openjdk /opt/java/openjdk
