@@ -28,7 +28,7 @@ export default function Home() {
 
   const choose = useCallback((f?: File) => {
     if (!f) return;
-    setError(""); setReport(null);
+    setError(""); setConversionError(""); setReport(null);
     if (!f.name.toLowerCase().endsWith(".jar")) { setFile(null); setError("Please choose a .jar file."); return; }
     if (f.size > 25 * 1024 * 1024) { setFile(null); setError("That file is over the 25 MB limit."); return; }
     setFile(f);
