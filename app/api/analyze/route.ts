@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { inspectClass } from "@/lib/classfile";
 import { HORIZON_HOOKS, HORIZON_REVISION } from "@/lib/horizon-hooks";
 import { assessTranslationReadiness } from "@/lib/translation-rules";
+import { translatePureIntMethods } from "@/lib/pure-int-translator";
 
 export const runtime = "nodejs";
 const MAX_FILE = 25 * 1024 * 1024;
@@ -126,6 +127,7 @@ export async function POST(request: Request) {
     const depNames = Object.keys(depends);
     const platform = depNames.some(x => /forge|neoforge/i.test(x)) ? "Forge/NeoForge" : fabric ? "Fabric" : "Unknown";
     const translationReadiness = assessTranslationReadiness({ platform, entrypoints, mixinAnnotations });
+    const pureIntTranslations = translatePureIntMethods(classInsights);
     const flags: {level:string;code:string;message:string}[] = [];
     if (!fabric) flags.push({ level:"warning", code:"NO_FABRIC_METADATA", message:"No fabric.mod.json found. This may be a Forge, NeoForge, Quilt, or non-Fabric mod." });
     if (mixinConfigs.length || declaredMixins.length) flags.push({ level:"info", code:"MIXINS_FOUND", message:"Mixin behavior needs hook-by-hook mapping to native Horizon hooks." });
@@ -140,12 +142,13 @@ export async function POST(request: Request) {
         minecraft: typeof depends.minecraft === "string" ? depends.minecraft : null,
         dependencies: depNames, entrypoints, mixin_configs: [...new Set([...mixinConfigs, ...declaredMixins])],
         mixin_classes: mixinClasses.length, mixin_config_details: mixinConfigReports, class_files: classes.length, assets: assets.length,
+        bytecode_translation: { supported_methods: pureIntTranslations.length, methods: pureIntTranslations },
         bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, api_surface: apiSurface, member_references_seen: memberReferences.length, bytecode_instructions_seen: bytecodeInstructions.length, invocation_sites_seen: invocationSites.length, field_access_sites_seen: fieldAccessSites.length, common_instructions: commonInstructions, invocation_samples: invocationSites.slice(0,120), field_access_samples: fieldAccessSites.slice(0,80), mixin_annotations: mixinAnnotations, behavior_evidence: behaviorEvidence, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
       },
       horizon: { revision: HORIZON_REVISION, hooks: HORIZON_HOOKS },
       flags,
       translation_readiness: translationReadiness,
-      conversion: { status:"analysis_only", hnmod_generated:false, reason:"The scanner now inspects JVM method bytecode instructions, call sites, field accesses, class structure and Mixin metadata. These are static clues, not a Java-to-Rust compiler or proof of runtime behavior.", next_step:"Build verified translators for specific Minecraft APIs and map each behavior to supported Horizon hooks. Unsupported code must remain clearly marked instead of being packaged as a working mod." }
+      conversion: { status:"analysis_only", hnmod_generated:false, reason:"The analyzer now translates a narrow subset of pure static Java integer methods into Rust. This is real bytecode translation, but those helpers are not yet connected to Minecraft gameplay or a Horizon hook.", next_step:"Expand verified bytecode patterns and build a tested bridge from a supported Minecraft behavior to a matching Horizon hook before packaging gameplay mods." }
     });
   } catch {
     return NextResponse.json({ error: "Could not read this archive. Make sure it is a valid JAR file." }, { status: 400 });
