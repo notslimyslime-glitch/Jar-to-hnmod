@@ -56,7 +56,7 @@ export default function Home() {
       if (!response.ok) { const data = await response.json(); throw new Error(data.error || "Conversion failed."); }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob); const a = document.createElement("a");
-      a.href = url; a.download = file.name.replace(/\\.jar$/i, ".hnmod"); a.click();
+      a.href = url; a.download = file.name.replace(/\.jar$/i, ".hnmod"); a.click();
       URL.revokeObjectURL(url);
     } catch (e) { setConversionError(e instanceof Error ? e.message : "Conversion failed."); }
     finally { setConverting(false); }
