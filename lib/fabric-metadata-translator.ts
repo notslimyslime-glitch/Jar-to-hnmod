@@ -38,10 +38,12 @@ export function translateFabricMetadata(input: {
   classFiles: number;
   mixinConfigs: number;
   entrypointCount: number;
+  resourceFiles: number;
 }): FabricMetadataBridge {
   if (input.classFiles > 0) throw new Error("This JAR contains Java classes. Gameplay translation is not part of the metadata-only bridge.");
   if (input.mixinConfigs > 0) throw new Error("This JAR declares Mixin configs. Their behavior cannot be represented by a metadata-only bridge.");
   if (input.entrypointCount > 0) throw new Error("This JAR declares Fabric entrypoints. Their Java behavior needs a real translator.");
+  if (input.resourceFiles > 0) throw new Error("This JAR contains assets or data files. The metadata-only bridge cannot carry resources across.");
 
   const rawId = input.metadata.id;
   const rawVersion = input.metadata.version;
@@ -95,7 +97,7 @@ bindings = [{ name = "mods", ty = "&mut Vec<crate::game::native_hooks::NativeMod
     sources: { "register.rs": helper },
     limitations: [
       "Only the mod's display name, version and description are carried over.",
-      "Java gameplay, assets, dependencies, settings and runtime behavior are not converted.",
+      "Java gameplay, assets, data files, dependencies, settings and runtime behavior are not converted.",
       "This prototype output still needs a pinned Horizon Mixins compile test before it can be called a supported conversion."
     ]
   };
