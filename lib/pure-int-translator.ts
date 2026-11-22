@@ -1,4 +1,4 @@
-import type { ClassSummary, BytecodeInstruction } from "./classfile";
+import type { ClassSummary } from "./classfile";
 
 export type PureIntTranslation = {
   class_name: string;
