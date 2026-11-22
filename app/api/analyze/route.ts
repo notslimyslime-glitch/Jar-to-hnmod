@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import { inspectClass } from "@/lib/classfile";
 
 export const runtime = "nodejs";
 const MAX_FILE = 25 * 1024 * 1024;
@@ -43,6 +44,17 @@ export async function POST(request: Request) {
     const mixinConfigs = names.filter(n => n.toLowerCase().endsWith(".mixins.json") || n.toLowerCase().endsWith(".mixin.json"));
     const mixinClasses = names.filter(n => /mixin/i.test(n) && n.endsWith(".class"));
     const classes = names.filter(n => n.endsWith(".class"));
+    const classInsights: ReturnType<typeof inspectClass>[] = [];
+    let unreadableClasses = 0;
+    for (const entry of entries.filter(x => x.name.endsWith(".class")).slice(0, 200)) {
+      try {
+        const data = await entry.async("uint8array");
+        if (data.byteLength > 1024 * 1024) { unreadableClasses++; continue; }
+        classInsights.push(inspectClass(data));
+      } catch { unreadableClasses++; }
+    }
+    const referencedTypes = [...new Set(classInsights.flatMap(x => x.referencedClasses))].slice(0, 100);
+    const methodCount = classInsights.reduce((sum, x) => sum + x.methods.length, 0);
     const assets = names.filter(n => n.startsWith("assets/"));
     const depNames = Object.keys(depends);
     const platform = depNames.some(x => /forge|neoforge/i.test(x)) ? "Forge/NeoForge" : fabric ? "Fabric" : "Unknown";
@@ -59,10 +71,11 @@ export async function POST(request: Request) {
         version: typeof metadata.version === "string" ? metadata.version : null,
         minecraft: typeof depends.minecraft === "string" ? depends.minecraft : null,
         dependencies: depNames, entrypoints, mixin_configs: [...new Set([...mixinConfigs, ...declaredMixins])],
-        mixin_classes: mixinClasses.length, class_files: classes.length, assets: assets.length
+        mixin_classes: mixinClasses.length, class_files: classes.length, assets: assets.length,
+        bytecode_inspection: { inspected_classes: classInsights.length, skipped_or_unreadable: unreadableClasses, methods_seen: methodCount, referenced_types: referencedTypes, class_samples: classInsights.slice(0, 20).map(x => ({ name: x.name, super_name: x.superName, java_version: x.majorVersion, methods: x.methods.slice(0, 12).map(m => ({ name: m.name, descriptor: m.descriptor })), strings: x.stringConstants.slice(0, 12) })) }
       },
       flags,
-      conversion: { status:"analysis_only", hnmod_generated:false, reason:"A correct native port requires verified mappings for the mod's behavior and target Horizon hooks.", next_step:"Review mixins and entrypoints, then add explicit compatibility mappings before generating Rust." }
+      conversion: { status:"analysis_only", hnmod_generated:false, reason:"The scanner now inspects JVM class structure, method signatures, referenced types and string constants. This is evidence for translation, not a Java-to-Rust compiler.", next_step:"Build verified translators for specific Minecraft APIs and map each behavior to supported Horizon hooks. Unsupported code must remain clearly marked instead of being packaged as a working mod." }
     });
   } catch {
     return NextResponse.json({ error: "Could not read this archive. Make sure it is a valid JAR file." }, { status: 400 });
